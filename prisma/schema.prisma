@@ -1,0 +1,530 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============ AUTH & PROFILES ============
+
+model Profile {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  fullName  String?
+  avatarUrl String?
+  role      String   @default("editor") // super_admin, admin_lppm, editor, reviewer
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  activityLogs ActivityLog[]
+}
+
+// ============ SITE SETTINGS ============
+
+model SiteSetting {
+  id             String   @id @default(cuid())
+  siteName       String   @default("LPPM Kampus")
+  lppmName       String   @default("Lembaga Penelitian dan Pengabdian kepada Masyarakat")
+  logoUrl        String?
+  lppmLogoUrl    String?
+  faviconUrl     String?
+  email          String?
+  phone          String?
+  whatsapp       String?
+  address        String?
+  googleMapsUrl  String?
+  facebookUrl    String?
+  instagramUrl   String?
+  youtubeUrl     String?
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// ============ LPPM PROFILE ============
+
+model LppmProfile {
+  id                String   @id @default(cuid())
+  about             String?
+  vision            String?
+  mission           String?
+  goals             String?
+  duties            String?
+  chairmanName      String?
+  chairmanPhotoUrl  String?
+  chairmanMessage   String?
+  structureImageUrl String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// ============ FACULTY & STUDY PROGRAMS ============
+
+model Faculty {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  studyPrograms  StudyProgram[]
+  researchers    Researcher[]
+  researches     Research[]
+  communityServices CommunityService[]
+}
+
+model StudyProgram {
+  id        String   @id @default(cuid())
+  facultyId String
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  faculty         Faculty    @relation(fields: [facultyId], references: [id])
+  researchers     Researcher[]
+  researches      Research[]
+  communityServices CommunityService[]
+}
+
+// ============ RESEARCHERS / DOSEN ============
+
+model Researcher {
+  id                 String   @id @default(cuid())
+  nidn               String?
+  nip                String?
+  name               String
+  degree             String?
+  functionalPosition String?
+  facultyId          String?
+  studyProgramId     String?
+  expertise          String?
+  email              String?
+  phone              String?
+  googleScholarUrl   String?
+  sintaId            String?
+  scopusId           String?
+  orcidId            String?
+  photoUrl           String?
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  faculty               Faculty?            @relation(fields: [facultyId], references: [id])
+  studyProgram          StudyProgram?       @relation(fields: [studyProgramId], references: [id])
+  researchLeader        Research[]
+  researchMembers       ResearchMember[]
+  serviceLeader         CommunityService[]
+  serviceMembers        CommunityServiceMember[]
+  reviewer              Reviewer?
+  publicationAuthors    PublicationAuthor[]
+}
+
+// ============ FUNDING SCHEMES ============
+
+model FundingScheme {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  source          String?
+  year            Int
+  description     String?
+  requirements    String?
+  minBudget       Float?
+  maxBudget       Float?
+  openDate        DateTime?
+  deadline        DateTime?
+  status          String   @default("draft") // active, closed, draft
+  guideFileUrl    String?
+  registrationUrl String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  researches       Research[]
+  communityServices CommunityService[]
+}
+
+// ============ RESEARCH ============
+
+model Research {
+  id               String   @id @default(cuid())
+  title            String
+  slug             String   @unique
+  abstract         String?
+  year             Int
+  fundingSchemeId  String?
+  leaderId         String?
+  facultyId        String?
+  studyProgramId   String?
+  fundingSource    String?
+  budget           Float?
+  startDate        DateTime?
+  endDate          DateTime?
+  status           String   @default("draft") // draft, ongoing, completed, cancelled
+  outputs          String?
+  mainImageUrl     String?
+  documentUrl      String?
+  isFeatured       Boolean  @default(false)
+  isPublished      Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  fundingScheme    FundingScheme?     @relation(fields: [fundingSchemeId], references: [id])
+  leader          Researcher?        @relation(fields: [leaderId], references: [id])
+  faculty         Faculty?           @relation(fields: [facultyId], references: [id])
+  studyProgram    StudyProgram?      @relation(fields: [studyProgramId], references: [id])
+  members         ResearchMember[]
+  studentMembers  ResearchStudentMember[]
+  publications    Publication[]
+  proposalReviews ProposalReview[]
+}
+
+model ResearchMember {
+  id           String   @id @default(cuid())
+  researchId   String
+  researcherId String
+  role         String   @default("anggota")
+  createdAt    DateTime @default(now())
+
+  research    Research  @relation(fields: [researchId], references: [id], onDelete: Cascade)
+  researcher  Researcher @relation(fields: [researcherId], references: [id])
+
+  @@unique([researchId, researcherId])
+}
+
+model ResearchStudentMember {
+  id            String   @id @default(cuid())
+  researchId    String
+  studentName   String
+  nim           String?
+  studyProgram  String?
+  role          String   @default("anggota")
+  createdAt     DateTime @default(now())
+
+  research      Research @relation(fields: [researchId], references: [id], onDelete: Cascade)
+}
+
+// ============ COMMUNITY SERVICE ============
+
+model CommunityService {
+  id               String   @id @default(cuid())
+  title            String
+  slug             String   @unique
+  summary          String?
+  location         String?
+  village          String?
+  district         String?
+  regency          String?
+  year             Int
+  fundingSchemeId  String?
+  leaderId         String?
+  facultyId        String?
+  studyProgramId   String?
+  partnerName      String?
+  fundingSource    String?
+  budget           Float?
+  startDate        DateTime?
+  endDate          DateTime?
+  status           String   @default("draft") // draft, ongoing, completed, cancelled
+  outputs          String?
+  impact           String?
+  mainImageUrl     String?
+  documentUrl      String?
+  isFeatured       Boolean  @default(false)
+  isPublished      Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  fundingScheme    FundingScheme?     @relation(fields: [fundingSchemeId], references: [id])
+  leader          Researcher?        @relation(fields: [leaderId], references: [id])
+  faculty         Faculty?           @relation(fields: [facultyId], references: [id])
+  studyProgram    StudyProgram?      @relation(fields: [studyProgramId], references: [id])
+  members         CommunityServiceMember[]
+  studentMembers  CommunityServiceStudentMember[]
+  publications    Publication[]
+  proposalReviews ProposalReview[]
+}
+
+model CommunityServiceMember {
+  id           String   @id @default(cuid())
+  serviceId    String
+  researcherId String
+  role         String   @default("anggota")
+  createdAt    DateTime @default(now())
+
+  service     CommunityService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  researcher  Researcher       @relation(fields: [researcherId], references: [id])
+
+  @@unique([serviceId, researcherId])
+}
+
+model CommunityServiceStudentMember {
+  id           String   @id @default(cuid())
+  serviceId    String
+  studentName  String
+  nim          String?
+  studyProgram String?
+  role         String   @default("anggota")
+  createdAt    DateTime @default(now())
+
+  service     CommunityService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+}
+
+// ============ PUBLICATIONS ============
+
+model Publication {
+  id              String   @id @default(cuid())
+  title           String
+  slug            String   @unique
+  publicationType String   @default("journal_national") // journal_national, journal_international, proceeding, book, book_chapter, hki, patent, popular_article
+  authors         String?
+  publisherName   String?
+  journalName     String?
+  year            Int
+  volume          String?
+  number          String?
+  pages           String?
+  issn            String?
+  isbn            String?
+  doi             String?
+  url             String?
+  indexing        String?
+  accreditation   String?
+  fileUrl         String?
+  researchId      String?
+  serviceId       String?
+  isPublished     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  research    Research?          @relation(fields: [researchId], references: [id])
+  service     CommunityService?  @relation(fields: [serviceId], references: [id])
+  publicationAuthors PublicationAuthor[]
+}
+
+model PublicationAuthor {
+  id            String   @id @default(cuid())
+  publicationId String
+  researcherId  String
+  authorOrder   Int      @default(1)
+  createdAt     DateTime @default(now())
+
+  publication  Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  researcher   Researcher  @relation(fields: [researcherId], references: [id])
+
+  @@unique([publicationId, researcherId])
+}
+
+// ============ NEWS ============
+
+model NewsCategory {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  news News[]
+}
+
+model News {
+  id             String    @id @default(cuid())
+  categoryId     String?
+  title          String
+  slug           String    @unique
+  excerpt        String?
+  content        String?
+  imageUrl       String?
+  status         String    @default("draft") // draft, published
+  isFeatured     Boolean   @default(false)
+  seoTitle       String?
+  seoDescription String?
+  publishedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  category       NewsCategory? @relation(fields: [categoryId], references: [id])
+}
+
+// ============ ANNOUNCEMENTS ============
+
+model Announcement {
+  id            String    @id @default(cuid())
+  title         String
+  slug          String    @unique
+  content       String?
+  attachmentUrl String?
+  type          String    @default("normal") // normal, important
+  status        String    @default("draft") // active, inactive, draft
+  publishedAt   DateTime?
+  expiredAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// ============ DOCUMENTS ============
+
+model DocumentCategory {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents Document[]
+}
+
+model Document {
+  id            String   @id @default(cuid())
+  categoryId    String?
+  title         String
+  slug          String   @unique
+  description   String?
+  fileUrl       String?
+  fileType      String?
+  fileSize      String?
+  downloadCount Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  category      DocumentCategory? @relation(fields: [categoryId], references: [id])
+}
+
+// ============ REVIEWERS ============
+
+model Reviewer {
+  id           String   @id @default(cuid())
+  researcherId String?  @unique
+  name         String
+  nidn         String?
+  nip          String?
+  email        String?
+  phone        String?
+  institution  String?
+  expertise    String?
+  reviewerType String   @default("internal") // internal, external
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  researcher      Researcher?       @relation(fields: [researcherId], references: [id])
+  proposalReviews ProposalReview[]
+}
+
+// ============ PROPOSAL REVIEWS ============
+
+model ProposalReview {
+  id            String    @id @default(cuid())
+  proposalType  String    @default("research") // research, community_service
+  researchId    String?
+  serviceId     String?
+  reviewerId    String
+  score         Float?
+  notes         String?
+  status        String    @default("waiting") // waiting, reviewing, revision, accepted, rejected
+  reviewFileUrl String?
+  reviewedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  research      Research?        @relation(fields: [researchId], references: [id])
+  service       CommunityService? @relation(fields: [serviceId], references: [id])
+  reviewer      Reviewer         @relation(fields: [reviewerId], references: [id])
+}
+
+// ============ PARTNERS ============
+
+model Partner {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  partnerType     String   @default("other") // government, industry, ngo, university, community, other
+  address         String?
+  contactPerson   String?
+  email           String?
+  phone           String?
+  cooperationType String?
+  startDate       DateTime?
+  endDate         DateTime?
+  status          String   @default("active") // active, inactive, expired
+  logoUrl         String?
+  documentUrl     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============ AGENDA ============
+
+model Agenda {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  description String?
+  eventType   String?  // seminar, workshop, sosialisasi, monev, deadline, pelatihan
+  startDate   DateTime
+  endDate     DateTime?
+  location    String?
+  organizer   String?
+  posterUrl   String?
+  status      String   @default("upcoming") // upcoming, ongoing, completed, cancelled
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============ GALLERY ============
+
+model GalleryAlbum {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  description String?
+  coverUrl    String?
+  category    String?  // research, community_service, seminar, workshop
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  photos GalleryPhoto[]
+}
+
+model GalleryPhoto {
+  id        String   @id @default(cuid())
+  albumId   String
+  imageUrl  String
+  caption   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  album     GalleryAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+}
+
+// ============ CONTACT MESSAGES ============
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// ============ ACTIVITY LOGS ============
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  tableName   String?
+  recordId    String?
+  description String?
+  createdAt   DateTime @default(now())
+
+  user        Profile? @relation(fields: [userId], references: [id])
+}
