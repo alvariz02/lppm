@@ -22,12 +22,14 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Simple password check: password is stored as plain text in the profile
-    // In production, use proper password hashing (bcrypt, etc.)
-    // For this demo, we accept any password that matches or the default 'admin123'
-    // Since Profile model doesn't have a password field, we use a simple approach:
-    // Accept login if email exists and account is active
-    // The password field is just for form UX
+    // Simple password verification (plain text for demo)
+    // In production, use bcrypt or similar
+    if (profile.password !== password) {
+      return NextResponse.json(
+        { error: 'Password salah' },
+        { status: 401 }
+      )
+    }
 
     const response = NextResponse.json({
       success: true,
@@ -40,7 +42,7 @@ export async function POST(req: NextRequest) {
     })
 
     // Set auth cookie for middleware to check
-    response.cookies.set('lppm_auth', '1', {
+    response.cookies.set('lppm_auth', profile.id, {
       path: '/',
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',

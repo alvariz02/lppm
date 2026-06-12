@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 import {
   FlaskConical,
   Search,
@@ -216,39 +217,41 @@ function ResearchCard({ item, index }: { item: ResearchItem; index: number }) {
       viewport={{ once: true, margin: '-30px' }}
       transition={{ duration: 0.4, delay: index * 0.05 }}
     >
-      <Card className="border-0 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white h-full flex flex-col">
-        <CardHeader className="pb-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge className={`text-[10px] border-0 ${statusColor}`}>
-              {statusLabel}
-            </Badge>
-            <Badge variant="outline" className="text-[10px]">
-              {item.year}
-            </Badge>
-          </div>
-          <CardTitle className="text-base leading-snug line-clamp-2 mt-2">
-            {item.title}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 flex flex-col">
-          <p className="text-sm text-muted-foreground line-clamp-3 mb-4 flex-1">
-            {truncateText(item.abstract, 150) || 'Tidak ada abstrak'}
-          </p>
-          <div className="flex items-center justify-between pt-3 border-t gap-2 flex-wrap">
-            {item.leader && (
-              <span className="text-xs text-muted-foreground truncate max-w-[50%] flex items-center gap-1">
-                <User className="size-3 shrink-0" />
-                {item.leader.name}
-              </span>
-            )}
-            {item.fundingSource && (
-              <Badge variant="secondary" className="text-[10px] shrink-0">
-                {item.fundingSource}
+      <Link href={`/penelitian/${item.slug}`} className="block h-full">
+        <Card className="border-0 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white h-full flex flex-col">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge className={`text-[10px] border-0 ${statusColor}`}>
+                {statusLabel}
               </Badge>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              <Badge variant="outline" className="text-[10px]">
+                {item.year}
+              </Badge>
+            </div>
+            <CardTitle className="text-base leading-snug line-clamp-2 mt-2">
+              {item.title}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col">
+            <p className="text-sm text-muted-foreground line-clamp-3 mb-4 flex-1">
+              {truncateText(item.abstract, 150) || 'Tidak ada abstrak'}
+            </p>
+            <div className="flex items-center justify-between pt-3 border-t gap-2 flex-wrap">
+              {item.leader && (
+                <span className="text-xs text-muted-foreground truncate max-w-[50%] flex items-center gap-1">
+                  <User className="size-3 shrink-0" />
+                  {item.leader.name}
+                </span>
+              )}
+              {item.fundingSource && (
+                <Badge variant="secondary" className="text-[10px] shrink-0">
+                  {item.fundingSource}
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
     </motion.div>
   )
 }

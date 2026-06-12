@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 import {
   BookOpen,
   Search,
@@ -222,7 +223,8 @@ function PublicationListItem({ item, index }: { item: PublicationItem; index: nu
       viewport={{ once: true, margin: '-30px' }}
       transition={{ duration: 0.4, delay: index * 0.03 }}
     >
-      <Card className="border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-white">
+      <Link href={`/publikasi/${item.slug}`} className="block h-full">
+      <Card className="border-0 shadow-md hover:shadow-lg transition-all duration-300 bg-white h-full">
         <CardContent className="p-4 lg:p-5">
           <div className="flex items-start gap-4">
             <div className="size-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
@@ -296,6 +298,7 @@ function PublicationListItem({ item, index }: { item: PublicationItem; index: nu
           </div>
         </CardContent>
       </Card>
+      </Link>
     </motion.div>
   )
 }

@@ -9,6 +9,7 @@ async function seed() {
     update: {},
     create: {
       email: 'admin@lppm.ac.id',
+      password: 'admin123',
       fullName: 'Admin LPPM',
       role: 'super_admin',
       isActive: true,
@@ -19,6 +20,7 @@ async function seed() {
     update: {},
     create: {
       email: 'editor@lppm.ac.id',
+      password: 'admin123',
       fullName: 'Editor LPPM',
       role: 'editor',
       isActive: true,

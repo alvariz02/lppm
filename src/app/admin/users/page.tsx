@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
-import { Plus, Pencil, Trash2, Search, Users, ShieldCheck } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Users, ShieldCheck, KeyRound } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -145,6 +145,7 @@ export default function UsersAdminPage() {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       email: '',
+      password: '',
       fullName: '',
       avatarUrl: '',
       role: 'editor',
@@ -154,7 +155,7 @@ export default function UsersAdminPage() {
 
   function openCreateDialog() {
     setEditingItem(null)
-    form.reset({ email: '', fullName: '', avatarUrl: '', role: 'editor', isActive: true })
+    form.reset({ email: '', password: 'admin123', fullName: '', avatarUrl: '', role: 'editor', isActive: true })
     setDialogOpen(true)
   }
 
@@ -162,6 +163,7 @@ export default function UsersAdminPage() {
     setEditingItem(item)
     form.reset({
       email: item.email,
+      password: '',
       fullName: item.fullName ?? '',
       avatarUrl: item.avatarUrl ?? '',
       role: item.role as ProfileInput['role'],
@@ -325,6 +327,23 @@ export default function UsersAdminPage() {
                 <Input {...form.register('email')} type="email" placeholder="email@example.com" />
                 {form.formState.errors.email && (
                   <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>{editingItem ? 'Reset Password' : 'Password'}</Label>
+                <div className="relative">
+                  <Input
+                    {...form.register('password')}
+                    type="text"
+                    placeholder={editingItem ? 'Kosongkan jika tidak ingin mengubah' : 'Password default: admin123'}
+                  />
+                  {editingItem && (
+                    <KeyRound className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  )}
+                </div>
+                {editingItem && (
+                  <p className="text-[11px] text-muted-foreground">Kosongkan jika tidak ingin mengubah password</p>
                 )}
               </div>
 

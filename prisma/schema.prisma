@@ -12,6 +12,7 @@ datasource db {
 model Profile {
   id        String   @id @default(cuid())
   email     String   @unique
+  password  String   @default("admin123")
   fullName  String?
   avatarUrl String?
   role      String   @default("editor") // super_admin, admin_lppm, editor, reviewer

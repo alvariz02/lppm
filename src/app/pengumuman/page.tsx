@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 import { Megaphone, AlertCircle, Calendar, FileText, ChevronRight } from 'lucide-react'
 import {
   Accordion,
@@ -168,7 +169,7 @@ export default function PengumumanPage() {
                     >
                       <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden">
                         <AccordionTrigger className="px-4 lg:px-6 py-4 lg:py-5 hover:no-underline hover:bg-muted/30 transition-colors [&[data-state=open]]:bg-muted/30">
-                          <div className="flex items-start gap-3 lg:gap-4 text-left flex-1 pr-4">
+                          <Link href={`/pengumuman/${announcement.slug}`} className="flex items-start gap-3 lg:gap-4 text-left flex-1 pr-4">
                             <div
                               className={`size-10 rounded-lg flex items-center justify-center shrink-0 ${
                                 announcement.type === 'important'
@@ -207,7 +208,7 @@ export default function PengumumanPage() {
                                 </Badge>
                               </div>
                             </div>
-                          </div>
+                          </Link>
                         </AccordionTrigger>
                         <AccordionContent className="px-4 lg:px-6 pb-4 lg:pb-5">
                           <div className="pl-14 lg:pl-14">

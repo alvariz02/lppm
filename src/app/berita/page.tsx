@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 import {
   Newspaper,
   Search,
@@ -240,44 +241,46 @@ function NewsCard({ item, index }: { item: NewsItem; index: number }) {
       viewport={{ once: true, margin: '-30px' }}
       transition={{ duration: 0.4, delay: index * 0.05 }}
     >
-      <Card className="overflow-hidden border-0 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white h-full flex flex-col">
-        {/* Image / Gradient placeholder */}
-        <div
-          className={`h-48 bg-gradient-to-br ${
-            newsGradients[index % newsGradients.length]
-          } relative`}
-        >
-          <div className="absolute inset-0 flex items-center justify-center">
-            <FileText className="size-16 text-white/30" />
+      <Link href={`/berita/${item.slug}`} className="block h-full">
+        <Card className="overflow-hidden border-0 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white h-full flex flex-col">
+          {/* Image / Gradient placeholder */}
+          <div
+            className={`h-48 bg-gradient-to-br ${
+              newsGradients[index % newsGradients.length]
+            } relative`}
+          >
+            <div className="absolute inset-0 flex items-center justify-center">
+              <FileText className="size-16 text-white/30" />
+            </div>
+            {item.category && (
+              <Badge className="absolute top-3 left-3 bg-white/90 text-primary backdrop-blur-sm text-xs font-medium">
+                {item.category.name}
+              </Badge>
+            )}
+            {item.isFeatured && (
+              <Badge className="absolute top-3 right-3 bg-accent text-accent-foreground text-[10px]">
+                <Star className="size-3 mr-0.5" />
+                Utama
+              </Badge>
+            )}
           </div>
-          {item.category && (
-            <Badge className="absolute top-3 left-3 bg-white/90 text-primary backdrop-blur-sm text-xs font-medium">
-              {item.category.name}
-            </Badge>
-          )}
-          {item.isFeatured && (
-            <Badge className="absolute top-3 right-3 bg-accent text-accent-foreground text-[10px]">
-              <Star className="size-3 mr-0.5" />
-              Utama
-            </Badge>
-          )}
-        </div>
-        <CardContent className="p-5 flex flex-col flex-1">
-          <h3 className="font-semibold text-foreground line-clamp-2 mb-2 leading-snug">
-            {item.title}
-          </h3>
-          {item.excerpt && (
-            <p className="text-sm text-muted-foreground line-clamp-3 mb-3 flex-1">
-              {truncateText(item.excerpt, 120)}
-            </p>
-          )}
-          <div className="flex items-center justify-between mt-auto pt-2">
-            <span className="text-xs text-muted-foreground">
-              {formatDate(item.publishedAt)}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+          <CardContent className="p-5 flex flex-col flex-1">
+            <h3 className="font-semibold text-foreground line-clamp-2 mb-2 leading-snug">
+              {item.title}
+            </h3>
+            {item.excerpt && (
+              <p className="text-sm text-muted-foreground line-clamp-3 mb-3 flex-1">
+                {truncateText(item.excerpt, 120)}
+              </p>
+            )}
+            <div className="flex items-center justify-between mt-auto pt-2">
+              <span className="text-xs text-muted-foreground">
+                {formatDate(item.publishedAt)}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
     </motion.div>
   )
 }

@@ -609,6 +609,7 @@ function NewsSection() {
           >
             {data.map((news, index) => (
               <motion.div key={news.id} variants={staggerItem}>
+                <Link href={`/berita/${news.slug}`} className="block h-full">
                 <Card className="overflow-hidden border-0 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white h-full flex flex-col">
                   {/* Image / Gradient placeholder */}
                   <div
@@ -638,20 +639,14 @@ function NewsSection() {
                       <span className="text-xs text-muted-foreground">
                         {formatDate(news.publishedAt)}
                       </span>
-                      <Button
-                        asChild
-                        variant="ghost"
-                        size="sm"
-                        className="text-primary hover:text-primary/80 p-0 h-auto"
-                      >
-                        <Link href="/berita">
-                          Baca
-                          <ChevronRight className="size-3" />
-                        </Link>
-                      </Button>
+                      <span className="inline-flex items-center gap-0.5 text-primary text-sm font-medium">
+                        Baca
+                        <ChevronRight className="size-3" />
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
+                </Link>
               </motion.div>
             ))}
           </motion.div>
@@ -724,8 +719,9 @@ function AnnouncementSection() {
             <Card className="border-0 shadow-md overflow-hidden">
               <CardContent className="p-0">
                 {displayData.map((ann, index) => (
-                  <div
+                  <Link
                     key={ann.id}
+                    href={`/pengumuman/${ann.slug}`}
                     className={`flex items-center gap-4 p-4 lg:p-5 hover:bg-muted/50 transition-colors ${
                       index < displayData.length - 1 ? 'border-b' : ''
                     }`}
@@ -750,7 +746,7 @@ function AnnouncementSection() {
                       </p>
                     </div>
                     <ChevronRight className="size-4 text-muted-foreground shrink-0 hidden sm:block" />
-                  </div>
+                  </Link>
                 ))}
               </CardContent>
             </Card>
@@ -821,6 +817,7 @@ function ResearchSection() {
           >
             {data.map((research) => (
               <motion.div key={research.id} variants={staggerItem}>
+                <Link href={`/penelitian/${research.slug}`} className="block h-full">
                 <Card className="border-0 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white h-full flex flex-col">
                   <CardHeader className="pb-2">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -857,6 +854,7 @@ function ResearchSection() {
                     </div>
                   </CardContent>
                 </Card>
+                </Link>
               </motion.div>
             ))}
           </motion.div>
@@ -926,6 +924,7 @@ function CommunityServiceSection() {
           >
             {data.map((service) => (
               <motion.div key={service.id} variants={staggerItem}>
+                <Link href={`/pengabdian/${service.slug}`} className="block h-full">
                 <Card className="border-0 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white h-full flex flex-col">
                   <CardHeader className="pb-2">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -963,6 +962,7 @@ function CommunityServiceSection() {
                     </div>
                   </CardContent>
                 </Card>
+                </Link>
               </motion.div>
             ))}
           </motion.div>
@@ -1037,8 +1037,9 @@ function PublicationSection() {
                 {displayData.map((pub, index) => {
                   const authorNames = pub.authors || pub.publicationAuthors?.map(pa => pa.researcher.name).join(', ') || ''
                   return (
-                    <div
+                    <Link
                       key={pub.id}
+                      href={`/publikasi/${pub.slug}`}
                       className={`flex items-start gap-4 p-4 lg:p-5 hover:bg-muted/50 transition-colors ${
                         index < displayData.length - 1 ? 'border-b' : ''
                       }`}
@@ -1075,7 +1076,7 @@ function PublicationSection() {
                         </div>
                       </div>
                       <ChevronRight className="size-4 text-muted-foreground shrink-0 hidden sm:block mt-2" />
-                    </div>
+                    </Link>
                   )
                 })}
               </CardContent>

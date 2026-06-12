@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 import {
   Award,
   Calendar,
@@ -180,6 +181,7 @@ function FundingSchemeCard({ item, index }: { item: FundingSchemeItem; index: nu
       viewport={{ once: true, margin: '-30px' }}
       transition={{ duration: 0.4, delay: index * 0.05 }}
     >
+      <Link href={`/hibah/${item.slug}`} className="block h-full">
       <Card className="border-0 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white h-full flex flex-col">
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2 flex-wrap">
@@ -255,6 +257,7 @@ function FundingSchemeCard({ item, index }: { item: FundingSchemeItem; index: nu
           )}
         </CardFooter>
       </Card>
+      </Link>
     </motion.div>
   )
 }

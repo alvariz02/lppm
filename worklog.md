@@ -1225,3 +1225,155 @@ NOT a DataTable — a form page for editing site settings, organized in Tabs:
 - ESLint passes with 0 errors, 13 warnings (all are `react-hooks/incompatible-library` warnings from `form.watch()` — same as existing pages)
 - All 4 new API endpoint groups tested and returning correct responses
 - All 4 admin pages compile successfully
+
+## Task 2-a: Create Detail API Routes for Public Pages
+
+**Date:** 2026-03-05
+**Files Created:**
+- `/home/z/my-project/src/app/api/research/[slug]/route.ts` — GET single research detail
+- `/home/z/my-project/src/app/api/community-service/[slug]/route.ts` — GET single community service detail
+- `/home/z/my-project/src/app/api/publication/[slug]/route.ts` — GET single publication detail
+- `/home/z/my-project/src/app/api/news/[slug]/route.ts` — GET single news article detail
+- `/home/z/my-project/src/app/api/announcement/[slug]/route.ts` — GET single announcement detail
+- `/home/z/my-project/src/app/api/funding-scheme/[slug]/route.ts` — GET single funding scheme detail
+
+### 1. Research Detail (`/api/research/[slug]`)
+- Fetches research by slug with full relations:
+  - leader: select id, name, nidn, photoUrl, expertise, email
+  - fundingScheme: select id, name, slug, source, year
+  - faculty: select id, name, slug
+  - studyProgram: select id, name, slug
+  - members: include researcher (select id, name, nidn, photoUrl)
+  - studentMembers: all fields
+  - publications: select id, title, slug, publicationType, year
+- Returns 404 if not found or isPublished is false
+
+### 2. Community Service Detail (`/api/community-service/[slug]`)
+- Fetches community service by slug with full relations:
+  - leader: select id, name, nidn, photoUrl, expertise, email
+  - fundingScheme: select id, name, slug, source, year
+  - faculty: select id, name, slug
+  - studyProgram: select id, name, slug
+  - members: include researcher (select id, name, nidn, photoUrl)
+  - studentMembers: all fields
+  - publications: select id, title, slug, publicationType, year
+- Returns 404 if not found or isPublished is false
+
+### 3. Publication Detail (`/api/publication/[slug]`)
+- Fetches publication by slug with:
+  - research: select id, title, slug, year
+  - service: select id, title, slug, year
+  - publicationAuthors: include researcher (select id, name, nidn, photoUrl)
+- Returns 404 if not found or isPublished is false
+
+### 4. News Detail (`/api/news/[slug]`)
+- Fetches news by slug with:
+  - category: select id, name, slug
+- Returns 404 if not found or status is not 'published'
+
+### 5. Announcement Detail (`/api/announcement/[slug]`)
+- Fetches announcement by slug (no relations)
+- Returns 404 if not found or status is not 'active'
+
+### 6. Funding Scheme Detail (`/api/funding-scheme/[slug]`)
+- Fetches funding scheme by slug with filtered relations:
+  - researches: where isPublished=true, select id, title, slug, year, status, leader (select id, name)
+  - communityServices: where isPublished=true, select id, title, slug, year, status, leader (select id, name)
+- Returns 404 if not found (no isPublished check on funding scheme itself)
+
+### Design Patterns
+- All endpoints follow the same structure: try/catch with console.error logging
+- Dynamic route params use `{ params }: { params: Promise<{ slug: string }> }` with `await params`
+- Responses wrapped in `{ data: item }` on success
+- Error responses: `{ error: 'Not found' }` (404) or `{ error: 'Failed to fetch data' }` (500)
+- Console error tags: `[API_RESEARCH_GET]`, `[API_COMMUNITY_SERVICE_GET]`, `[API_PUBLICATION_GET]`, `[API_NEWS_GET]`, `[API_ANNOUNCEMENT_GET]`, `[API_FUNDING_SCHEME_GET]`
+
+### Lint & Testing
+- ESLint passes with 0 errors (13 pre-existing warnings only)
+- No new lint issues introduced
+
+---
+
+## Task 3: Admin Document Categories Page, Error Boundary, and Loading Boundary
+
+**Date:** 2026-03-05
+**Task ID:** 3
+
+**Files Created:**
+- `/home/z/my-project/src/app/api/admin/document-categories/route.ts` — GET list + POST create
+- `/home/z/my-project/src/app/api/admin/document-categories/[id]/route.ts` — GET, PUT, DELETE
+- `/home/z/my-project/src/app/admin/document-categories/page.tsx` — CRUD admin page
+- `/home/z/my-project/src/app/admin/error.tsx` — Admin error boundary
+- `/home/z/my-project/src/app/admin/loading.tsx` — Admin loading boundary
+
+**Files Modified:**
+- `/home/z/my-project/src/app/admin/layout.tsx` — Added "Kategori Dokumen" nav item + FolderOpen icon import
+
+### 1. Document Categories API — List & Create (`/api/admin/document-categories/route.ts`)
+
+- **GET**: Paginated list of document categories with search filter
+  - Query params: `page`, `pageSize`, `search`
+  - Includes `_count.documents` for document count per category
+  - Ordered by `createdAt` desc
+  - Returns `{ data, total, page, pageSize, totalPages }`
+- **POST**: Create new document category
+  - Body: `{ name: string }`
+  - Auto-generates slug via `generateSlug()`
+  - Checks slug uniqueness (409 conflict if exists)
+  - Returns `{ data: category }` with 201 status
+
+### 2. Document Categories API — Individual Item (`/api/admin/document-categories/[id]/route.ts`)
+
+- **GET**: Get single document category by ID with document count
+  - Returns 404 if not found
+- **PUT**: Update document category by ID
+  - Body: `{ name: string }`
+  - Auto-regenerates slug
+  - Checks slug uniqueness excluding self
+  - Returns 404 if not found
+- **DELETE**: Delete document category by ID
+  - Prevents deletion if category has associated documents (returns 400 with error message)
+  - Returns 404 if not found
+  - Returns `{ data: { id } }` on success
+
+### 3. Admin Document Categories Page (`/admin/document-categories`)
+
+Same CRUD pattern as the existing news-categories admin page:
+- **Header**: FolderOpen icon, "Kategori Dokumen" title, "Kelola kategori dokumen unduhan" subtitle
+- **Search input**: Filters by name, resets page to 1
+- **Table columns**: Name, Slug (code badge), Jumlah Dokumen (Badge), Aksi (Edit/Delete buttons)
+- **Add/Edit Dialog**: Name field with Zod validation (min 1 char), auto-slug generation
+- **Delete Confirmation**: AlertDialog with destructive action button
+- **Pagination**: Sebelumnya/Selanjutnya buttons with page/totalPages display
+- **Loading state**: 5-row skeleton
+- **Empty state**: FolderOpen icon with "Belum ada data kategori dokumen" message
+- **TanStack React Query**: `useQuery` for data fetching, `useMutation` for create/update/delete
+- **sonner**: Toast notifications for success/error on all mutations
+- **Framer Motion**: Stagger container animation
+
+### 4. Admin Error Boundary (`/admin/error.tsx`)
+
+- `'use client'` component
+- Logs error to console via `useEffect`
+- Displays: destructive-colored AlertCircle icon, "Terjadi Kesalahan" heading, error message, "Coba Lagi" button with RotateCcw icon
+- Uses shadcn/ui Button with outline variant
+- Centered layout with `min-h-[400px]`
+
+### 5. Admin Loading Boundary (`/admin/loading.tsx`)
+
+- Server component (no `'use client'` needed)
+- Displays: animated spinning Loader2 icon with primary color, "Memuat data..." text
+- Centered layout with `min-h-[400px]`
+
+### 6. Admin Sidebar Update
+
+Added to `/admin/layout.tsx`:
+- Imported `FolderOpen` from lucide-react
+- Added nav item: `{ label: 'Kategori Dokumen', icon: FolderOpen, href: '/admin/document-categories' }`
+- Positioned after "Dokumen Unduhan" (item 12), before "Reviewer" (now item 14)
+- Total nav items: 21 (was 20)
+
+### Lint & Testing
+- ESLint: 0 errors, 13 pre-existing warnings (no new issues introduced)
+- API endpoint responds correctly (returns "Unauthorized" due to auth middleware, as expected)
+- All files compile successfully

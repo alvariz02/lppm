@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 import {
   CalendarDays,
   AlertCircle,
@@ -269,7 +270,8 @@ export default function AgendaPage() {
             >
               {data.map((agenda) => (
                 <motion.div key={agenda.id} variants={staggerItem}>
-                  <Card className="border-0 shadow-md hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 bg-white">
+                  <Link href={`/agenda/${agenda.slug}`} className="block h-full">
+                <Card className="border-0 shadow-md hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 bg-white h-full">
                     <CardContent className="p-5 lg:p-6">
                       <div className="flex items-start gap-4">
                         {/* Date badge */}
@@ -349,6 +351,7 @@ export default function AgendaPage() {
                       </div>
                     </CardContent>
                   </Card>
+                </Link>
                 </motion.div>
               ))}
             </motion.div>

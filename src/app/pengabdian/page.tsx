@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 import {
   HeartHandshake,
   Search,
@@ -209,40 +210,42 @@ function ServiceCard({ item, index }: { item: CommunityServiceItem; index: numbe
       viewport={{ once: true, margin: '-30px' }}
       transition={{ duration: 0.4, delay: index * 0.05 }}
     >
-      <Card className="border-0 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white h-full flex flex-col">
-        <CardHeader className="pb-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge className={`text-[10px] border-0 ${statusColor}`}>
-              {statusLabel}
-            </Badge>
-            <Badge variant="outline" className="text-[10px]">
-              {item.year}
-            </Badge>
-          </div>
-          <CardTitle className="text-base leading-snug line-clamp-2 mt-2">
-            {item.title}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 flex flex-col">
-          <p className="text-sm text-muted-foreground line-clamp-3 mb-4 flex-1">
-            {truncateText(item.summary, 150) || 'Tidak ada ringkasan'}
-          </p>
-          <div className="flex items-center gap-3 pt-3 border-t text-xs text-muted-foreground flex-wrap">
-            {locationStr && (
-              <span className="flex items-center gap-1 truncate max-w-[50%]">
-                <MapPin className="size-3 shrink-0" />
-                {locationStr}
-              </span>
-            )}
-            {item.leader && (
-              <span className="flex items-center gap-1 truncate">
-                <User className="size-3 shrink-0" />
-                {item.leader.name}
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <Link href={`/pengabdian/${item.slug}`} className="block h-full">
+        <Card className="border-0 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white h-full flex flex-col">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge className={`text-[10px] border-0 ${statusColor}`}>
+                {statusLabel}
+              </Badge>
+              <Badge variant="outline" className="text-[10px]">
+                {item.year}
+              </Badge>
+            </div>
+            <CardTitle className="text-base leading-snug line-clamp-2 mt-2">
+              {item.title}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col">
+            <p className="text-sm text-muted-foreground line-clamp-3 mb-4 flex-1">
+              {truncateText(item.summary, 150) || 'Tidak ada ringkasan'}
+            </p>
+            <div className="flex items-center gap-3 pt-3 border-t text-xs text-muted-foreground flex-wrap">
+              {locationStr && (
+                <span className="flex items-center gap-1 truncate max-w-[50%]">
+                  <MapPin className="size-3 shrink-0" />
+                  {locationStr}
+                </span>
+              )}
+              {item.leader && (
+                <span className="flex items-center gap-1 truncate">
+                  <User className="size-3 shrink-0" />
+                  {item.leader.name}
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
     </motion.div>
   )
 }

@@ -308,6 +308,7 @@ export type ContactMessageInput = z.infer<typeof contactMessageSchema>
 
 export const profileSchema = z.object({
   email: z.string().min(1, 'Email wajib diisi').email('Format email tidak valid'),
+  password: z.string().optional(),
   fullName: z.string().nullable().optional(),
   avatarUrl: z.string().nullable().optional(),
   role: userRoleEnum,

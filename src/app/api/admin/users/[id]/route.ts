@@ -59,6 +59,7 @@ export async function PUT(
       where: { id },
       data: {
         email: validated.email,
+        ...(validated.password ? { password: validated.password } : {}),
         fullName: validated.fullName ?? null,
         avatarUrl: validated.avatarUrl ?? null,
         role: validated.role,

@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
     const profile = await db.profile.create({
       data: {
         email: validated.email,
+        password: validated.password || 'admin123',
         fullName: validated.fullName ?? null,
         avatarUrl: validated.avatarUrl ?? null,
         role: validated.role,
