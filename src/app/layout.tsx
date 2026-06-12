@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/sonner";
+import PublicLayout from "@/components/layout/PublicLayout";
+import { Providers } from "@/components/Providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,24 +16,23 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Z.ai Code Scaffold - AI-Powered Development",
-  description: "Modern Next.js scaffold optimized for AI-powered development with Z.ai. Built with TypeScript, Tailwind CSS, and shadcn/ui.",
-  keywords: ["Z.ai", "Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui", "AI development", "React"],
-  authors: [{ name: "Z.ai Team" }],
-  icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+  title: {
+    default: "LPPM Kampus - Lembaga Penelitian dan Pengabdian kepada Masyarakat",
+    template: "%s | LPPM Kampus",
   },
+  description: "Website resmi Lembaga Penelitian dan Pengabdian kepada Masyarakat (LPPM) Kampus. Pusat informasi penelitian, pengabdian masyarakat, publikasi ilmiah, hibah, dan kerja sama.",
+  keywords: ["LPPM", "penelitian", "pengabdian masyarakat", "publikasi", "hibah", "kampus", "universitas"],
+  authors: [{ name: "LPPM Kampus" }],
   openGraph: {
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
-    url: "https://chat.z.ai",
-    siteName: "Z.ai",
+    title: "LPPM Kampus - Lembaga Penelitian dan Pengabdian kepada Masyarakat",
+    description: "Pusat informasi penelitian, pengabdian masyarakat, publikasi ilmiah, hibah, dan kerja sama.",
     type: "website",
+    siteName: "LPPM Kampus",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
+    title: "LPPM Kampus",
+    description: "Lembaga Penelitian dan Pengabdian kepada Masyarakat",
   },
 };
 
@@ -41,12 +42,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="id" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        {children}
-        <Toaster />
+        <Providers>
+          <PublicLayout>
+            {children}
+          </PublicLayout>
+          <Toaster richColors position="top-right" />
+        </Providers>
       </body>
     </html>
   );
