@@ -1,5 +1,8 @@
 'use client'
 
+import { useAdminPage } from '@/hooks/useAdminPage'
+import { ViewOnlyBanner } from '@/components/admin/ViewOnlyBanner'
+
 import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -7,7 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { z } from 'zod'
 import {
-  ClipboardCheck, Plus, Pencil, Trash2, Search, Loader2,
+  ClipboardCheck, Plus, Pencil, Trash2, Search, Loader2
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
@@ -103,6 +106,7 @@ const animItem = {
 // ============ MAIN COMPONENT ============
 
 export default function AdminReviewsPage() {
+  const { isViewOnly, canWrite } = useAdminPage()
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -323,12 +327,15 @@ export default function AdminReviewsPage() {
             <p className="text-sm text-muted-foreground">Kelola review proposal penelitian & pengabdian</p>
           </div>
         </div>
-        <Button onClick={openAddForm} size="sm">
-          <Plus className="size-4 mr-1" />
-          Tambah Review
-        </Button>
+        {canWrite && (
+          <Button onClick={openAddForm} size="sm">
+            <Plus className="size-4 mr-1" />
+            Tambah Review
+          </Button>
+        )}
       </motion.div>
 
+      {isViewOnly && <ViewOnlyBanner />}
       {/* Search & Filters */}
       <motion.div variants={animItem} className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-sm">
@@ -434,12 +441,16 @@ export default function AdminReviewsPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <Button variant="ghost" size="icon" className="size-8" onClick={() => openEditForm(r)}>
-                                <Pencil className="size-3.5" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="size-8 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(r)}>
-                                <Trash2 className="size-3.5" />
-                              </Button>
+                              {canWrite && (
+                              <>
+                                <Button variant="ghost" size="icon" className="size-8" onClick={() => openEditForm(r)}>
+                                  <Pencil className="size-3.5" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="size-8 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(r)}>
+                                  <Trash2 className="size-3.5" />
+                                </Button>
+                              </>
+                            )}
                             </div>
                           </TableCell>
                         </TableRow>

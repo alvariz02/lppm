@@ -6,6 +6,7 @@ export async function GET() {
     const currentYear = new Date().getFullYear()
     const last5Years = Array.from({ length: 5 }, (_, i) => currentYear - 4 + i)
 
+    // Combine all independent counts into a single Promise.all
     const [
       totalResearch,
       totalCommunityService,
@@ -18,6 +19,11 @@ export async function GET() {
       ongoingService,
       completedService,
       totalActiveHibah,
+      totalNews,
+      totalAnnouncement,
+      totalDocument,
+      unreadMessages,
+      pendingReviews,
       // Chart data: research per year
       researchPerYear,
       // Chart data: community service per year
@@ -42,6 +48,13 @@ export async function GET() {
       db.communityService.count({ where: { isPublished: true, status: 'ongoing' } }),
       db.communityService.count({ where: { isPublished: true, status: 'completed' } }),
       db.fundingScheme.count({ where: { status: 'active' } }),
+
+      // Additional counts for dashboard
+      db.news.count({ where: { status: 'published' } }),
+      db.announcement.count({ where: { status: 'active' } }),
+      db.document.count({ where: { isActive: true } }),
+      db.contactMessage.count({ where: { isRead: false } }),
+      db.proposalReview.count({ where: { status: 'waiting' } }),
 
       // Research per year (last 5 years)
       Promise.all(
@@ -123,6 +136,11 @@ export async function GET() {
       ongoingService,
       completedService,
       totalActiveHibah,
+      totalNews,
+      totalAnnouncement,
+      totalDocument,
+      unreadMessages,
+      pendingReviews,
       researchPerYear,
       servicePerYear,
       publicationsByType: publicationsByType.map((item) => ({

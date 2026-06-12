@@ -1377,3 +1377,282 @@ Added to `/admin/layout.tsx`:
 - ESLint: 0 errors, 13 pre-existing warnings (no new issues introduced)
 - API endpoint responds correctly (returns "Unauthorized" due to auth middleware, as expected)
 - All files compile successfully
+
+---
+
+## Task 2: Refactor useAuth Hook and Add RBAC Permission System
+
+**Date:** 2026-03-05
+**Files Created:**
+- `/home/z/my-project/src/lib/permissions.ts` — Complete RBAC permission system (was a simpler route-only version, now enhanced with full Permission type system)
+
+**Files Modified:**
+- `/home/z/my-project/src/hooks/useAuth.ts` — Refactored with hasPermission, canAccess helpers and useSyncExternalStore
+- `/home/z/my-project/src/middleware.ts` — Added role-based API and page route protection
+- `/home/z/my-project/src/app/api/auth/login/route.ts` — Added lppm_role cookie
+- `/home/z/my-project/src/app/api/auth/logout/route.ts` — Clear lppm_role cookie on logout
+
+### 1. permissions.ts — Complete RBAC System
+
+Created comprehensive permission system with two complementary approaches:
+
+#### Permission-Based System (fine-grained)
+- **Permission type**: 24 permission strings covering `dashboard:view`, resource `:manage`/`:view` pairs, and singleton permissions (`messages:view`, `users:manage`, `settings:manage`, `profil:manage`, `news-categories:manage`, `document-categories:manage`)
+- **ROLE_PERMISSIONS map**: Full mapping of each role to its allowed permissions
+  - `super_admin`: All 24 permissions
+  - `admin_lppm`: 22 permissions (excludes `users:manage`, `settings:manage`, `profil:manage`)
+  - `editor`: 18 permissions (manage: news, announcements, documents, agenda, gallery, news-categories, document-categories; view-only: research, community-service, publication, funding, partners, messages, reviews)
+  - `reviewer`: 5 permissions (dashboard:view, reviews:manage/view, research:view, community-service:view)
+- **Helper functions**: `hasPermission(role, permission)`, `canManage(role, resource)`, `canView(role, resource)`
+
+#### Route-Based System (sidebar/UI control)
+- **RouteAccess interface**: `{ path: string, viewOnly?: boolean }` — viewOnly marks read-only routes
+- **ROLE_ROUTES map**: Per-role accessible admin routes with viewOnly flags
+  - `super_admin`: All 21 routes, full access
+  - `admin_lppm`: 19 routes (no /admin/users, /admin/settings), profil is viewOnly
+  - `editor`: 14 routes (news, announcements, documents, document-categories, agenda, gallery + view-only for research, community-service, publications, funding, partners, messages, reviews)
+  - `reviewer`: 4 routes (dashboard, reviews, research view-only, community-service view-only)
+- **Helper functions**: `canAccessRoute(role, route)`, `getAccessibleRoutes(role)`, `getAccessibleRoutePaths(role)`, `isRouteViewOnly(role, route)`, `canWriteRoute(role, route)`
+
+### 2. useAuth.ts — Refactored with Permission Helpers
+
+Refactored the useAuth hook to include RBAC helpers:
+- **Imports**: Added `Permission` type and `hasPermission`/`canAccessRoute` from `@/lib/permissions`
+- **AuthUser interface**: Changed `role` type from `string` to `UserRole`
+- **useSyncExternalStore**: Replaced `useState`+`useEffect` pattern with `useSyncExternalStore` to avoid the React Compiler lint error (`react-hooks/set-state-in-effect`)
+- **hasPermission callback**: `hasPermission(permission: Permission) => boolean` — checks if current user has a specific permission
+- **canAccess callback**: `canAccess(route: string) => boolean` — checks if current user can access a specific admin route
+- **logout**: Now clears both `lppm_auth` and `lppm_role` cookies
+- **Return value**: `{ user, loading, login, logout, isAuthenticated, hasPermission, canAccess }`
+
+### 3. middleware.ts — Role-Based Route Protection
+
+Enhanced middleware with role-based access control:
+- **lppm_role cookie**: Reads the new `lppm_role` cookie for role checking
+- **Admin page protection**:
+  - `/admin/users` and `/admin/settings`: Only `super_admin` (redirects to `/admin` for others)
+  - `/admin/researchers`, `/admin/faculties`, `/admin/study-programs`, `/admin/reviewers`: Only `super_admin` and `admin_lppm`
+  - Other `/admin/*` routes: All authenticated users
+- **Admin API protection**:
+  - `/api/admin/users/*` and `/api/admin/settings/*`: Only `super_admin` (returns 403 Forbidden for others)
+  - `/api/admin/researchers/*`, `/api/admin/faculties/*`, `/api/admin/study-programs/*`, `/api/admin/reviewers/*`: Only `super_admin` and `admin_lppm` (returns 403)
+  - Other `/api/admin/*` routes: All authenticated users (client-side handles further restrictions)
+
+### 4. Login API — lppm_role Cookie
+
+Updated `/api/auth/login/route.ts`:
+- Added `lppm_role` cookie with the user's role value on successful login
+- Same cookie settings as `lppm_auth`: `path=/`, `httpOnly=false`, `sameSite=lax`, 7-day expiry
+- This allows the middleware to check the role without database queries
+
+### 5. Logout API — Clear lppm_role Cookie
+
+Updated `/api/auth/logout/route.ts`:
+- Now clears both `lppm_auth` and `lppm_role` cookies on logout
+
+### Admin Layout — Already Uses Permission System
+
+The admin layout (`/admin/layout.tsx`) was already updated by a previous agent to:
+- Filter sidebar navigation items based on user role using `getAccessibleRoutes()`
+- Show "Lihat" (view-only) badges on read-only sidebar items using `isRouteViewOnly()`
+- Use `useMemo` for filtered nav items and page title based on role
+
+### Lint & Testing
+- ESLint: 0 errors, 13 warnings (all pre-existing `react-hooks/incompatible-library` from react-hook-form)
+- Fixed the previous `react-hooks/set-state-in-effect` error in useAuth.ts by switching to `useSyncExternalStore`
+- Dev server compiles successfully
+
+## Task 3 (Optimize): Admin Layout Role-Based Sidebar + Dashboard Performance
+
+**Date:** 2026-03-05
+**Files Created:**
+- `/home/z/my-project/src/lib/permissions.ts` — Role-based route access permissions module
+- `/home/z/my-project/src/app/admin/loading.tsx` — Skeleton loader for admin pages
+- `/home/z/my-project/src/app/admin/error.tsx` — Error boundary with retry button
+
+**Files Modified:**
+- `/home/z/my-project/src/app/admin/layout.tsx` — Refactored with role-based sidebar, memoization, view-only badges
+- `/home/z/my-project/src/app/admin/page.tsx` — Optimized with lazy-loaded charts, memoized stat cards, error boundaries, staleTime
+
+### 1. Permissions Module (`/src/lib/permissions.ts`)
+
+Centralized role-based route access control:
+- **`getAccessibleRoutes(role)`**: Returns array of `{ path, viewOnly }` for a given role
+- **`getAccessibleRoutePaths(role)`**: Returns just the path strings
+- **`canAccessRoute(role, routePath)`**: Boolean check if user can access a route
+- **`isRouteViewOnly(role, routePath)`**: Returns true if route is view-only for that role
+- **`canWriteRoute(role, routePath)`**: Returns true if route is accessible AND not view-only
+
+Role visibility definitions:
+- **super_admin**: ALL 21 routes, full access
+- **admin_lppm**: All EXCEPT `/admin/users` and `/admin/settings`
+- **editor**: Dashboard, Berita, Pengumuman, Dokumen, Kategori Dokumen, Agenda, Galeri, Pesan Kontak (full access) + Penelitian, Pengabdian, Publikasi, Hibah, Kerja Sama (view-only)
+- **reviewer**: Dashboard + Review Proposal only
+
+### 2. Admin Layout Refactor (`/admin/layout.tsx`)
+
+Major refactoring for role-based sidebar:
+- **Role-based nav filtering**: `getNavItemsForRole(role)` uses `getAccessibleRoutes()` from permissions module to filter NAV_ITEMS based on user role
+- **FilteredNavItem type**: Extends NavItem with `viewOnly: boolean` flag
+- **"Lihat" badge for view-only items**: View-only sidebar items show a subtle `Badge` with `Eye` icon and "Lihat" text, plus dimmed styling (60% opacity text, 40% opacity icons)
+- **Removed duplicate useAuth**: Previously `SidebarContent` called `useAuth()` separately for logout — now logout is passed as `onLogout` prop from parent, avoiding duplicate hook instance
+- **useMemo for sidebar items**: `filteredNavItems` memoized based on `user.role` to prevent recalculation on re-renders
+- **useMemo for page title**: `currentPageTitle` memoized based on `filteredNavItems` and `pathname`
+- **useCallback for handleLogout**: Logout handler has stable reference via `useCallback`
+- **Smooth sidebar filtering**: No flicker — filtered items are computed before render
+
+### 3. Dashboard Page Optimization (`/admin/page.tsx`)
+
+Performance improvements:
+- **React.lazy() for chart components**: 4 lazy-loaded chart components (`LazyResearchChart`, `LazyServiceChart`, `LazyPublicationChart`, `LazyFundingChart`) using dynamic `import('recharts')` for code splitting
+- **Suspense boundaries**: Each chart wrapped in `<Suspense fallback={<ChartSkeleton />}>` for loading state
+- **Error boundaries for charts**: `ChartErrorBoundary` component wraps each chart section — one failed chart doesn't break the whole page, shows retry button
+- **Class-based ErrorBoundaryWrapper**: Used inside `ChartErrorBoundary` for proper React error catching
+- **Memoized StatCard**: `React.memo` wraps stat card component to prevent unnecessary re-renders
+- **Query optimization**: `staleTime: 60000` (60 seconds) and `refetchOnWindowFocus: false` on the stats query to prevent excessive refetching
+- **STAT_CARDS constant**: Moved outside component to prevent recreation
+
+### 4. Admin Loading Page (`/admin/loading.tsx`)
+
+Skeleton loader matching the dashboard layout:
+- Page heading skeleton
+- 6 stat card skeletons in responsive grid
+- 4 chart card skeletons (2+2 grid)
+- Recent activity list skeleton
+- Uses `animate-in fade-in` for smooth appearance
+
+### 5. Admin Error Page (`/admin/error.tsx`)
+
+Error boundary page with:
+- Error icon with destructive color
+- Error message display with digest ID
+- "Coba Lagi" (retry) button calling `reset()`
+- "Kembali ke Dashboard" button linking to `/admin`
+- Clean centered layout
+
+### Lint & Testing
+- ESLint: 0 errors, 13 pre-existing warnings (react-hooks/incompatible-library from react-hook-form)
+- Admin page returns 307 (redirect to login) when unauthenticated — correct behavior
+- Login API returns 200 with valid credentials
+- Admin page returns 200 with valid auth cookies
+- Dev server compiles successfully
+
+---
+
+## Task 5: Verify and Fix All CRUD API Routes for Every Prisma Model
+
+**Date:** 2026-03-05
+**Files Modified:**
+- `/home/z/my-project/src/app/api/admin/partners/[id]/route.ts` — Added slug regeneration on PUT
+- `/home/z/my-project/src/app/api/admin/partners/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+- `/home/z/my-project/src/app/api/admin/faculties/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+- `/home/z/my-project/src/app/api/admin/study-programs/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+- `/home/z/my-project/src/app/api/admin/researchers/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+- `/home/z/my-project/src/app/api/admin/research/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+- `/home/z/my-project/src/app/api/admin/community-service/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+- `/home/z/my-project/src/app/api/admin/news-categories/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+- `/home/z/my-project/src/app/api/admin/document-categories/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+- `/home/z/my-project/src/app/api/admin/reviewers/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+- `/home/z/my-project/src/app/api/admin/reviews/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+- `/home/z/my-project/src/app/api/admin/agenda/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+- `/home/z/my-project/src/app/api/stats/route.ts` — Added 5 new dashboard count fields
+
+### 1. Complete API Route Inventory (All 26 Models)
+
+Every Prisma model now has a complete set of CRUD admin API routes:
+
+| # | Model | Admin Route | GET list | POST create | GET [id] | PUT update | DELETE | Status |
+|---|-------|-------------|----------|-------------|----------|------------|--------|--------|
+| 1 | Profile | /api/admin/users | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 2 | SiteSetting | /api/admin/settings | ✅ | N/A (singleton) | N/A | ✅ (upsert) | N/A | Complete |
+| 3 | LppmProfile | /api/admin/lppm-profile | ✅ | N/A (singleton) | N/A | ✅ (upsert) | N/A | Complete |
+| 4 | Faculty | /api/admin/faculties | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 5 | StudyProgram | /api/admin/study-programs | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 6 | Researcher | /api/admin/researchers | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 7 | FundingScheme | /api/admin/funding | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 8 | Research | /api/admin/research | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 9 | ResearchMember | (within Research) | — | — | — | — | — | Managed via Research |
+| 10 | ResearchStudentMember | (within Research) | — | — | — | — | — | Managed via Research |
+| 11 | CommunityService | /api/admin/community-service | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 12 | CommunityServiceMember | (within CommunityService) | — | — | — | — | — | Managed via CS |
+| 13 | CommunityServiceStudentMember | (within CommunityService) | — | — | — | — | — | Managed via CS |
+| 14 | Publication | /api/admin/publications | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 15 | PublicationAuthor | (within Publication) | — | — | — | — | — | Managed via Publication |
+| 16 | NewsCategory | /api/admin/news-categories | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 17 | News | /api/admin/news | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 18 | Announcement | /api/admin/announcements | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 19 | DocumentCategory | /api/admin/document-categories | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 20 | Document | /api/admin/documents | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 21 | Reviewer | /api/admin/reviewers | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 22 | ProposalReview | /api/admin/reviews | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 23 | Partner | /api/admin/partners | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 24 | Agenda | /api/admin/agenda | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 25 | GalleryAlbum | /api/admin/gallery | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 25b | GalleryPhoto | /api/admin/gallery/[id]/photos | ✅ | ✅ | — | ✅ (by photoId) | ✅ (by photoId) | Complete |
+| 26 | ContactMessage | /api/admin/messages | ✅ | N/A (public POST) | ✅ | ✅ (mark read) | ✅ | Complete |
+| 27 | ActivityLog | No admin CRUD | — | — | — | — | — | System-generated |
+
+### 2. Auth Cookies (Already Implemented)
+
+- **Login route** (`/api/auth/login`): Already sets both `lppm_auth` (user ID) and `lppm_role` (user role) cookies ✅
+- **Logout route** (`/api/auth/logout`): Already clears both `lppm_auth` and `lppm_role` cookies ✅
+
+### 3. Partner PUT Route Bug Fix
+
+**Problem**: The partner PUT route did NOT regenerate the slug when the name was changed. This meant:
+- If a partner name was updated, the slug would remain the old value
+- No slug uniqueness check was performed on update
+- This was inconsistent with all other routes (faculties, study-programs, research, community-service, etc.) that do regenerate slugs on PUT
+
+**Fix**: Added `generateSlug` import and slug regeneration logic to `/api/admin/partners/[id]/route.ts`:
+- Import `generateSlug` from `@/lib/helpers`
+- Generate new slug from the updated name
+- Check for slug uniqueness (excluding self) with `findFirst({ where: { slug, id: { not: id } } })`
+- Return 409 conflict if another partner already has that slug
+- Include `slug` in the `update` data object
+
+### 4. Stats API Enhancement
+
+Added 5 new dashboard count fields to `/api/stats/route.ts`:
+
+| Field | Description | Query |
+|-------|-------------|-------|
+| `totalNews` | Total published news | `db.news.count({ where: { status: 'published' } })` |
+| `totalAnnouncement` | Total active announcements | `db.announcement.count({ where: { status: 'active' } })` |
+| `totalDocument` | Total active documents | `db.document.count({ where: { isActive: true } })` |
+| `unreadMessages` | Unread contact messages | `db.contactMessage.count({ where: { isRead: false } })` |
+| `pendingReviews` | Reviews awaiting review | `db.proposalReview.count({ where: { status: 'waiting' } })` |
+
+All 5 new queries are included in the same `Promise.all` call for optimal parallel execution.
+
+### 5. Consistency Fix: page/pageSize Bounds
+
+**Problem**: 11 admin routes used bare `parseInt()` for page/pageSize without bounds checking or `DEFAULT_PAGE_SIZE`, while 8 routes properly used `Math.max(1, parseInt(...))` and `Math.min(100, Math.max(1, parseInt(...)))` with `DEFAULT_PAGE_SIZE`.
+
+**Fixed routes** (11 files):
+1. `/api/admin/faculties/route.ts`
+2. `/api/admin/study-programs/route.ts`
+3. `/api/admin/researchers/route.ts`
+4. `/api/admin/research/route.ts`
+5. `/api/admin/community-service/route.ts`
+6. `/api/admin/news-categories/route.ts`
+7. `/api/admin/document-categories/route.ts`
+8. `/api/admin/reviewers/route.ts`
+9. `/api/admin/reviews/route.ts`
+10. `/api/admin/agenda/route.ts`
+11. `/api/admin/partners/route.ts`
+
+**Changes per file**:
+- Added `import { DEFAULT_PAGE_SIZE } from '@/lib/constants'`
+- Changed `page` from `parseInt(searchParams.get('page') || '1')` to `Math.max(1, parseInt(searchParams.get('page') || '1'))`
+- Changed `pageSize` from `parseInt(searchParams.get('pageSize') || '10')` to `Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE))))`
+
+Now all 19 paginated admin routes use the same consistent pattern for page/pageSize parsing and validation.
+
+### 6. Lint & Testing
+
+- ESLint: 0 errors, 13 pre-existing warnings (React Hook Form `watch()` compatibility)
+- `/api/stats` returns all 16 fields including the 5 new ones (verified via curl)
+- `/api/auth/login` sets both `lppm_auth` and `lppm_role` cookies (verified via curl -c)
+- All admin routes return proper paginated response format `{ data, total, page, pageSize, totalPages }`
+- Dev server compiles successfully

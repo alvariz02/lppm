@@ -9,5 +9,11 @@ export async function POST() {
     maxAge: 0,
   })
 
+  // Clear role cookie
+  response.cookies.set('lppm_role', '', {
+    path: '/',
+    maxAge: 0,
+  })
+
   return response
 }

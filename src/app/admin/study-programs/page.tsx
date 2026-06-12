@@ -1,5 +1,8 @@
 'use client'
 
+import { useAdminPage } from '@/hooks/useAdminPage'
+import { ViewOnlyBanner } from '@/components/admin/ViewOnlyBanner'
+
 import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -104,6 +107,7 @@ const item = {
 // ============ MAIN COMPONENT ============
 
 export default function AdminStudyProgramsPage() {
+  const { isViewOnly, canWrite } = useAdminPage()
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -273,12 +277,15 @@ export default function AdminStudyProgramsPage() {
             <p className="text-sm text-muted-foreground">Kelola data program studi</p>
           </div>
         </div>
-        <Button onClick={openAddForm} size="sm">
-          <Plus className="size-4 mr-1" />
-          Tambah Prodi
-        </Button>
+        {canWrite && (
+          <Button onClick={openAddForm} size="sm">
+            <Plus className="size-4 mr-1" />
+            Tambah Prodi
+          </Button>
+        )}
       </motion.div>
 
+      {isViewOnly && <ViewOnlyBanner />}
       {/* Search & Filter */}
       <motion.div variants={item} className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-sm">
@@ -360,22 +367,26 @@ export default function AdminStudyProgramsPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-8"
-                              onClick={() => openEditForm(sp)}
-                            >
-                              <Pencil className="size-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-8 text-destructive hover:text-destructive"
-                              onClick={() => openDeleteDialog(sp)}
-                            >
-                              <Trash2 className="size-3.5" />
-                            </Button>
+                            {canWrite && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-8"
+                                  onClick={() => openEditForm(sp)}
+                                >
+                                  <Pencil className="size-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-8 text-destructive hover:text-destructive"
+                                  onClick={() => openDeleteDialog(sp)}
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

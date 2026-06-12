@@ -1,5 +1,8 @@
 'use client'
 
+import { useAdminPage } from '@/hooks/useAdminPage'
+import { ViewOnlyBanner } from '@/components/admin/ViewOnlyBanner'
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -41,6 +44,7 @@ async function saveSettings(data: SiteSettingInput) {
 // ============ MAIN PAGE ============
 
 export default function SettingsAdminPage() {
+  const { isViewOnly, canWrite } = useAdminPage()
   const queryClient = useQueryClient()
 
   const { data: settings, isLoading } = useQuery({
@@ -145,6 +149,7 @@ export default function SettingsAdminPage() {
         </div>
       </div>
 
+      {isViewOnly && <ViewOnlyBanner />}
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <Tabs defaultValue="general" className="space-y-4">
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
@@ -312,6 +317,7 @@ export default function SettingsAdminPage() {
           </TabsContent>
 
           {/* Save Button */}
+          {canWrite && (
           <div className="flex justify-end">
             <Button type="submit" disabled={saveMutation.isPending} size="lg">
               {saveMutation.isPending ? (
@@ -325,6 +331,7 @@ export default function SettingsAdminPage() {
               )}
             </Button>
           </div>
+          )}
         </Tabs>
       </form>
     </motion.div>

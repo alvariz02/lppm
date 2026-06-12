@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
-import { AlertCircle, RotateCcw } from 'lucide-react'
+import { AlertCircle, RefreshCw, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 
 export default function AdminError({
   error,
@@ -11,23 +11,40 @@ export default function AdminError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
-  useEffect(() => {
-    console.error('[ADMIN_ERROR]', error)
-  }, [error])
-
   return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 p-8">
-      <div className="size-16 rounded-full bg-destructive/10 flex items-center justify-center">
+    <div className="flex flex-col items-center justify-center py-16 gap-4">
+      <div className="size-16 rounded-2xl bg-destructive/10 flex items-center justify-center">
         <AlertCircle className="size-8 text-destructive" />
       </div>
-      <h2 className="text-xl font-semibold text-foreground">Terjadi Kesalahan</h2>
-      <p className="text-muted-foreground text-center max-w-md">
-        {error.message || 'Terjadi kesalahan yang tidak terduga. Silakan coba lagi.'}
-      </p>
-      <Button onClick={reset} variant="outline" className="gap-2">
-        <RotateCcw className="size-4" />
-        Coba Lagi
-      </Button>
+      <div className="text-center space-y-2">
+        <h2 className="text-lg font-semibold text-foreground">
+          Terjadi Kesalahan
+        </h2>
+        <p className="text-sm text-muted-foreground max-w-md">
+          {error.message || 'Halaman admin tidak dapat dimuat. Silakan coba lagi.'}
+        </p>
+        {error.digest && (
+          <p className="text-xs text-muted-foreground">
+            Error ID: {error.digest}
+          </p>
+        )}
+      </div>
+      <div className="flex items-center gap-3 mt-2">
+        <Button
+          variant="outline"
+          onClick={reset}
+          className="gap-2"
+        >
+          <RefreshCw className="size-4" />
+          Coba Lagi
+        </Button>
+        <Button asChild variant="ghost" className="gap-2">
+          <Link href="/admin">
+            <ArrowLeft className="size-4" />
+            Kembali ke Dashboard
+          </Link>
+        </Button>
+      </div>
     </div>
   )
 }

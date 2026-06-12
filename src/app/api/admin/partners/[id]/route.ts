@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { partnerSchema } from '@/lib/validations'
+import { generateSlug } from '@/lib/helpers'
 
 export async function GET(
   _req: NextRequest,
@@ -42,10 +43,23 @@ export async function PUT(
 
     const data = validation.data
 
+    // Regenerate slug if name changed
+    const slug = generateSlug(data.name)
+    const slugConflict = await db.partner.findFirst({
+      where: { slug, id: { not: id } },
+    })
+    if (slugConflict) {
+      return NextResponse.json(
+        { error: 'Mitra dengan nama tersebut sudah ada' },
+        { status: 409 }
+      )
+    }
+
     const partner = await db.partner.update({
       where: { id },
       data: {
         name: data.name,
+        slug,
         partnerType: data.partnerType,
         address: data.address || null,
         contactPerson: data.contactPerson || null,

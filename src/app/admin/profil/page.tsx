@@ -1,5 +1,8 @@
 'use client'
 
+import { useAdminPage } from '@/hooks/useAdminPage'
+import { ViewOnlyBanner } from '@/components/admin/ViewOnlyBanner'
+
 import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -63,6 +66,7 @@ const animItem = {
 // ============ MAIN COMPONENT ============
 
 export default function AdminProfilLppmPage() {
+  const { isViewOnly, canWrite } = useAdminPage()
   const queryClient = useQueryClient()
   const [showPreview, setShowPreview] = useState(false)
 
@@ -185,6 +189,7 @@ export default function AdminProfilLppmPage() {
             <p className="text-sm text-muted-foreground">Kelola informasi profil Lembaga Penelitian dan Pengabdian kepada Masyarakat</p>
           </div>
         </div>
+        {canWrite && (
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -208,9 +213,10 @@ export default function AdminProfilLppmPage() {
             Simpan Profil
           </Button>
         </div>
+        )}
       </motion.div>
 
-      {/* Content */}
+      {isViewOnly && <ViewOnlyBanner />}
       <motion.div variants={animItem} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Form */}
         <Card className="border-0 shadow-sm">
@@ -375,6 +381,7 @@ export default function AdminProfilLppmPage() {
                 )} />
 
                 {/* Mobile save button */}
+                {canWrite && (
                 <div className="lg:hidden">
                   <Button
                     type="submit"
@@ -389,6 +396,7 @@ export default function AdminProfilLppmPage() {
                     Simpan Profil
                   </Button>
                 </div>
+                )}
               </form>
             </Form>
           </CardContent>

@@ -1,5 +1,8 @@
 'use client'
 
+import { useAdminPage } from '@/hooks/useAdminPage'
+import { ViewOnlyBanner } from '@/components/admin/ViewOnlyBanner'
+
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -75,6 +78,7 @@ async function deleteMessage(id: string) {
 // ============ MAIN PAGE ============
 
 export default function MessagesAdminPage() {
+  const { isViewOnly, canWrite } = useAdminPage()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
@@ -144,7 +148,7 @@ export default function MessagesAdminPage() {
         )}
       </div>
 
-      {/* Search & Filter */}
+      {isViewOnly && <ViewOnlyBanner />}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative max-w-sm flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -228,14 +232,16 @@ export default function MessagesAdminPage() {
                             <Button variant="ghost" size="icon" title="Lihat Pesan" onClick={() => openMessage(item)}>
                               <Eye className="size-4" />
                             </Button>
-                            {!item.isRead && (
+                            {canWrite && !item.isRead && (
                               <Button variant="ghost" size="icon" title="Tandai Dibaca" onClick={() => markReadMutation.mutate(item.id)}>
                                 <MailOpen className="size-4" />
                               </Button>
                             )}
-                            <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-700" onClick={() => setDeleteId(item.id)}>
-                              <Trash2 className="size-4" />
-                            </Button>
+                            {canWrite && (
+                              <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-700" onClick={() => setDeleteId(item.id)}>
+                                <Trash2 className="size-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -301,7 +307,7 @@ export default function MessagesAdminPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2 pt-2">
-                {!selectedMessage.isRead && (
+                {canWrite && !selectedMessage.isRead && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -312,14 +318,16 @@ export default function MessagesAdminPage() {
                     Tandai Dibaca
                   </Button>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-red-600 hover:text-red-700"
-                  onClick={() => { setDeleteId(selectedMessage.id); setSelectedMessage(null) }}
-                >
-                  <Trash2 className="size-4 mr-1" /> Hapus
-                </Button>
+                {canWrite && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => { setDeleteId(selectedMessage.id); setSelectedMessage(null) }}
+                  >
+                    <Trash2 className="size-4 mr-1" /> Hapus
+                  </Button>
+                )}
               </div>
             </div>
           )}

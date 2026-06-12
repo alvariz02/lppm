@@ -1,12 +1,15 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import type { UserRole } from '@/types'
+import type { Permission } from '@/lib/permissions'
+import { hasPermission as hasRolePermission, canAccessRoute } from '@/lib/permissions'
 
 export interface AuthUser {
   id: string
   email: string
   fullName: string | null
-  role: string
+  role: UserRole
 }
 
 const STORAGE_KEY = 'lppm_admin'
@@ -32,13 +35,23 @@ export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Read from localStorage after mount to avoid hydration mismatch
+  // Read from localStorage after mount
   useEffect(() => {
     const stored = getStoredUser()
     if (stored) {
       setUser(stored)
     }
     setLoading(false)
+  }, [])
+
+  // Listen for storage events (cross-tab sync)
+  useEffect(() => {
+    const handler = () => {
+      const stored = getStoredUser()
+      setUser(stored)
+    }
+    window.addEventListener('storage', handler)
+    return () => window.removeEventListener('storage', handler)
   }, [])
 
   const login = useCallback((userData: AuthUser) => {
@@ -48,10 +61,26 @@ export function useAuth() {
 
   const logout = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY)
-    // Also clear the auth cookie for middleware
     document.cookie = 'lppm_auth=; path=/; max-age=0'
+    document.cookie = 'lppm_role=; path=/; max-age=0'
     setUser(null)
   }, [])
 
-  return { user, loading, login, logout, isAuthenticated: !!user }
+  const hasPermission = useCallback(
+    (permission: Permission) => {
+      if (!user) return false
+      return hasRolePermission(user.role, permission)
+    },
+    [user]
+  )
+
+  const canAccess = useCallback(
+    (route: string) => {
+      if (!user) return false
+      return canAccessRoute(user.role, route)
+    },
+    [user]
+  )
+
+  return { user, loading, login, logout, isAuthenticated: !!user, hasPermission, canAccess }
 }

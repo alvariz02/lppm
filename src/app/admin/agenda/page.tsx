@@ -1,5 +1,7 @@
 'use client'
 
+import { useAdminPage } from '@/hooks/useAdminPage'
+
 import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -7,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import {
   CalendarDays, Plus, Pencil, Trash2, Search, Loader2,
-} from 'lucide-react'
+  Eye } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -94,6 +96,7 @@ const animItem = {
 // ============ MAIN COMPONENT ============
 
 export default function AdminAgendaPage() {
+  const { isViewOnly, canWrite } = useAdminPage()
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -274,12 +277,20 @@ export default function AdminAgendaPage() {
             <p className="text-sm text-muted-foreground">Kelola agenda kegiatan LPPM</p>
           </div>
         </div>
-        <Button onClick={openAddForm} size="sm">
-          <Plus className="size-4 mr-1" />
-          Tambah Agenda
-        </Button>
+        {canWrite && (
+          <Button onClick={openAddForm} size="sm">
+            <Plus className="size-4 mr-1" />
+            Tambah Agenda
+          </Button>
+        )}
       </motion.div>
 
+      {isViewOnly && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+              <Eye className="size-4 shrink-0" />
+              <span>Anda memiliki akses lihat saja untuk halaman ini</span>
+            </div>
+          )}
       {/* Search & Filters */}
       <motion.div variants={animItem} className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-sm">
@@ -389,12 +400,16 @@ export default function AdminAgendaPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <Button variant="ghost" size="icon" className="size-8" onClick={() => openEditForm(a)}>
-                                <Pencil className="size-3.5" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="size-8 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(a)}>
-                                <Trash2 className="size-3.5" />
-                              </Button>
+                              {canWrite && (
+                              <>
+                                <Button variant="ghost" size="icon" className="size-8" onClick={() => openEditForm(a)}>
+                                  <Pencil className="size-3.5" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="size-8 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(a)}>
+                                  <Trash2 className="size-3.5" />
+                                </Button>
+                              </>
+                            )}
                             </div>
                           </TableCell>
                         </TableRow>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -28,8 +28,8 @@ import {
   Settings,
   LogOut,
   Menu,
-  X,
   ChevronLeft,
+  Eye,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -37,6 +37,10 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { useAuth } from '@/hooks/useAuth'
 import { USER_ROLE_LABELS } from '@/lib/constants'
+import { getAccessibleRoutes, isRouteViewOnly } from '@/lib/permissions'
+import type { UserRole } from '@/types'
+
+// ============ NAV ITEMS DEFINITION ============
 
 interface NavItem {
   label: string
@@ -55,6 +59,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Publikasi', icon: FileText, href: '/admin/publications' },
   { label: 'Hibah/Pendanaan', icon: Banknote, href: '/admin/funding' },
   { label: 'Berita', icon: Newspaper, href: '/admin/news' },
+  { label: 'Kategori Berita', icon: FolderOpen, href: '/admin/news-categories' },
   { label: 'Pengumuman', icon: Bell, href: '/admin/announcements' },
   { label: 'Dokumen Unduhan', icon: Download, href: '/admin/documents' },
   { label: 'Kategori Dokumen', icon: FolderOpen, href: '/admin/document-categories' },
@@ -68,28 +73,48 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Pengaturan', icon: Settings, href: '/admin/settings' },
 ]
 
+// ============ ROLE-BASED NAV FILTERING ============
+
+interface FilteredNavItem extends NavItem {
+  viewOnly: boolean
+}
+
+function getNavItemsForRole(role: UserRole): FilteredNavItem[] {
+  const accessibleRoutes = getAccessibleRoutes(role)
+  const routeMap = new Map(accessibleRoutes.map((r) => [r.path, r.viewOnly ?? false]))
+
+  return NAV_ITEMS.filter((item) => {
+    // Dashboard /admin is always accessible if present
+    if (item.href === '/admin') {
+      return routeMap.has('/admin')
+    }
+    // Check if the item's href exactly matches an accessible route
+    if (routeMap.has(item.href)) return true
+    // Check if any accessible route is a prefix of the item's href
+    return accessibleRoutes.some(
+      (r) => r.path !== '/admin' && item.href.startsWith(r.path)
+    )
+  }).map((item) => ({
+    ...item,
+    viewOnly: routeMap.get(item.href) ?? false,
+  }))
+}
+
+// ============ SIDEBAR CONTENT ============
+
 function SidebarContent({
   pathname,
   onNavigate,
   collapsed,
+  filteredItems,
+  onLogout,
 }: {
   pathname: string
   onNavigate?: () => void
   collapsed?: boolean
+  filteredItems: FilteredNavItem[]
+  onLogout: () => void
 }) {
-  const router = useRouter()
-  const { logout } = useAuth()
-
-  async function handleLogout() {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-    } catch {
-      // Ignore error, still proceed with local logout
-    }
-    logout()
-    router.push('/login')
-  }
-
   const isActive = (href: string) => {
     if (href === '/admin') return pathname === '/admin'
     return pathname.startsWith(href)
@@ -113,7 +138,7 @@ function SidebarContent({
       {/* Navigation */}
       <ScrollArea className="flex-1 py-3">
         <nav className="px-2 space-y-0.5">
-          {NAV_ITEMS.map((item) => {
+          {filteredItems.map((item) => {
             const active = isActive(item.href)
             return (
               <Link
@@ -123,16 +148,35 @@ function SidebarContent({
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group ${
                   active
                     ? 'bg-white/15 text-white shadow-sm'
-                    : 'text-primary-foreground/75 hover:bg-white/10 hover:text-white'
+                    : item.viewOnly
+                      ? 'text-primary-foreground/60 hover:bg-white/5 hover:text-primary-foreground/80'
+                      : 'text-primary-foreground/75 hover:bg-white/10 hover:text-white'
                 }`}
                 title={collapsed ? item.label : undefined}
               >
                 <item.icon
                   className={`size-5 shrink-0 ${
-                    active ? 'text-accent' : 'text-primary-foreground/60 group-hover:text-primary-foreground/90'
+                    active
+                      ? 'text-accent'
+                      : item.viewOnly
+                        ? 'text-primary-foreground/40 group-hover:text-primary-foreground/60'
+                        : 'text-primary-foreground/60 group-hover:text-primary-foreground/90'
                   }`}
                 />
-                {!collapsed && <span className="truncate">{item.label}</span>}
+                {!collapsed && (
+                  <span className={`truncate flex-1 ${item.viewOnly ? 'opacity-70' : ''}`}>
+                    {item.label}
+                  </span>
+                )}
+                {!collapsed && item.viewOnly && (
+                  <Badge
+                    variant="outline"
+                    className="text-[9px] px-1.5 py-0 border-primary-foreground/30 text-primary-foreground/50 flex items-center gap-0.5 shrink-0"
+                  >
+                    <Eye className="size-2.5" />
+                    Lihat
+                  </Badge>
+                )}
               </Link>
             )
           })}
@@ -142,7 +186,7 @@ function SidebarContent({
       {/* Logout button */}
       <div className="px-2 py-3 border-t border-white/10 shrink-0">
         <button
-          onClick={handleLogout}
+          onClick={onLogout}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-primary-foreground/75 hover:bg-red-500/20 hover:text-red-300 transition-all duration-200 w-full"
           title={collapsed ? 'Logout' : undefined}
         >
@@ -154,6 +198,8 @@ function SidebarContent({
   )
 }
 
+// ============ MAIN LAYOUT ============
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -161,17 +207,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
+  // Memoize filtered nav items based on user role
+  const filteredNavItems = useMemo<FilteredNavItem[]>(() => {
+    if (!user?.role) return []
+    return getNavItemsForRole(user.role as UserRole)
+  }, [user?.role])
+
+  // Memoize the current page title based on filtered items
+  const currentPageTitle = useMemo(() => {
+    return (
+      filteredNavItems.find((item) => {
+        if (item.href === '/admin') return pathname === '/admin'
+        return pathname.startsWith(item.href)
+      })?.label ?? 'Dashboard'
+    )
+  }, [filteredNavItems, pathname])
+
+  // Logout handler — stable reference via useCallback
+  const handleLogout = useCallback(async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } catch {
+      // Ignore error, still proceed with local logout
+    }
+    logout()
+    router.push('/login')
+  }, [logout, router])
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       router.push('/login')
     }
   }, [loading, isAuthenticated, router])
-
-  // Close mobile sidebar on route change
-  // Using the onNavigate callback on sidebar links handles this
-  // when user clicks a link. Browser navigation (back/forward) is
-  // acceptable to keep the sidebar open.
 
   // Show loading while checking auth
   if (loading) {
@@ -200,7 +268,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }`}
       >
         <div className="relative h-full">
-          <SidebarContent pathname={pathname} collapsed={sidebarCollapsed} />
+          <SidebarContent
+            pathname={pathname}
+            collapsed={sidebarCollapsed}
+            filteredItems={filteredNavItems}
+            onLogout={handleLogout}
+          />
           {/* Collapse toggle */}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -237,6 +310,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <SidebarContent
                 pathname={pathname}
                 onNavigate={() => setSidebarOpen(false)}
+                filteredItems={filteredNavItems}
+                onLogout={handleLogout}
               />
             </motion.aside>
           </>
@@ -259,10 +334,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </Button>
               <div className="hidden sm:block">
                 <h1 className="text-lg font-semibold text-foreground">
-                  {NAV_ITEMS.find((item) => {
-                    if (item.href === '/admin') return pathname === '/admin'
-                    return pathname.startsWith(item.href)
-                  })?.label || 'Dashboard'}
+                  {currentPageTitle}
                 </h1>
               </div>
             </div>
@@ -286,15 +358,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 variant="ghost"
                 size="sm"
                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                onClick={async () => {
-                  try {
-                    await fetch('/api/auth/logout', { method: 'POST' })
-                  } catch {
-                    // Ignore error, still proceed with local logout
-                  }
-                  logout()
-                  router.push('/login')
-                }}
+                onClick={handleLogout}
               >
                 <LogOut className="size-4" />
                 <span className="hidden sm:inline ml-1">Logout</span>

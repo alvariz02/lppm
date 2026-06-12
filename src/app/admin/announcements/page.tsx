@@ -1,5 +1,8 @@
 'use client'
 
+import { useAdminPage } from '@/hooks/useAdminPage'
+import { ViewOnlyBanner } from '@/components/admin/ViewOnlyBanner'
+
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -93,6 +96,7 @@ async function deleteAnnouncement(id: string) {
 // ============ MAIN PAGE ============
 
 export default function AnnouncementsAdminPage() {
+  const { isViewOnly, canWrite } = useAdminPage()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
@@ -192,12 +196,14 @@ export default function AnnouncementsAdminPage() {
             <p className="text-sm text-muted-foreground">Kelola pengumuman</p>
           </div>
         </div>
-        <Button onClick={openCreateDialog} className="shrink-0">
-          <Plus className="size-4 mr-1" /> Tambah Pengumuman
-        </Button>
+        {canWrite && (
+          <Button onClick={openCreateDialog} className="shrink-0">
+            <Plus className="size-4 mr-1" /> Tambah Pengumuman
+          </Button>
+        )}
       </div>
 
-      {/* Search */}
+      {isViewOnly && <ViewOnlyBanner />}
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <Input
@@ -257,12 +263,16 @@ export default function AnnouncementsAdminPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)}>
-                              <Pencil className="size-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-700" onClick={() => setDeleteId(item.id)}>
-                              <Trash2 className="size-4" />
-                            </Button>
+                            {!isViewOnly && (
+                              <>
+                                <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)}>
+                                  <Pencil className="size-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-700" onClick={() => setDeleteId(item.id)}>
+                                  <Trash2 className="size-4" />
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

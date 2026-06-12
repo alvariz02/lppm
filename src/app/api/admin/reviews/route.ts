@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { DEFAULT_PAGE_SIZE } from '@/lib/constants'
 import { z } from 'zod'
 
 const proposalReviewSchema = z.object({
@@ -17,8 +18,11 @@ const proposalReviewSchema = z.object({
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const pageSize = parseInt(searchParams.get('pageSize') || '10')
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
+    const pageSize = Math.min(
+      100,
+      Math.max(1, parseInt(searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE)))
+    )
     const search = searchParams.get('search') || ''
     const status = searchParams.get('status') || ''
     const proposalType = searchParams.get('proposalType') || ''

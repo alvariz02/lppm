@@ -1,5 +1,8 @@
 'use client'
 
+import { useAdminPage } from '@/hooks/useAdminPage'
+import { ViewOnlyBanner } from '@/components/admin/ViewOnlyBanner'
+
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -115,6 +118,7 @@ async function deletePhoto(albumId: string, photoId: string) {
 // ============ MAIN PAGE ============
 
 export default function GalleryAdminPage() {
+  const { isViewOnly, canWrite } = useAdminPage()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
@@ -248,12 +252,14 @@ export default function GalleryAdminPage() {
             <p className="text-sm text-muted-foreground">Kelola album dan foto</p>
           </div>
         </div>
-        <Button onClick={openCreateDialog} className="shrink-0">
-          <Plus className="size-4 mr-1" /> Tambah Album
-        </Button>
+        {canWrite && (
+          <Button onClick={openCreateDialog} className="shrink-0">
+            <Plus className="size-4 mr-1" /> Tambah Album
+          </Button>
+        )}
       </div>
 
-      {/* Search */}
+      {isViewOnly && <ViewOnlyBanner />}
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <Input
@@ -326,12 +332,16 @@ export default function GalleryAdminPage() {
                             <Button variant="ghost" size="icon" title="Lihat Foto" onClick={() => openPhotoDialog(item)}>
                               <Eye className="size-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)}>
-                              <Pencil className="size-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-700" onClick={() => setDeleteId(item.id)}>
-                              <Trash2 className="size-4" />
-                            </Button>
+                            {canWrite && (
+                              <>
+                                <Button variant="ghost" size="icon" onClick={() => openEditDialog(item)}>
+                                  <Pencil className="size-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-700" onClick={() => setDeleteId(item.id)}>
+                                  <Trash2 className="size-4" />
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -423,6 +433,7 @@ export default function GalleryAdminPage() {
           </DialogHeader>
 
           {/* Add Photo Form */}
+          {canWrite && (
           <form onSubmit={photoForm.handleSubmit(onAddPhoto)} className="space-y-3 p-4 bg-muted/50 rounded-lg">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="sm:col-span-2 space-y-1.5">
@@ -442,6 +453,7 @@ export default function GalleryAdminPage() {
               {addPhotoMutation.isPending ? 'Menambah...' : 'Tambah Foto'}
             </Button>
           </form>
+          )}
 
           {/* Photo Grid */}
           {photosLoading ? (
@@ -464,6 +476,7 @@ export default function GalleryAdminPage() {
                       {photo.caption}
                     </div>
                   )}
+                  {canWrite && (
                   <Button
                     variant="destructive"
                     size="icon"
@@ -472,6 +485,7 @@ export default function GalleryAdminPage() {
                   >
                     <X className="size-3" />
                   </Button>
+                  )}
                 </div>
               ))}
             </div>

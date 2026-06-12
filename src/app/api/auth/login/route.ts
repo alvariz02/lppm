@@ -41,8 +41,17 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Set auth cookie for middleware to check
+    // Set auth cookie for middleware to check (user ID)
     response.cookies.set('lppm_auth', profile.id, {
+      path: '/',
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    })
+
+    // Set role cookie for middleware role-based route protection
+    response.cookies.set('lppm_role', profile.role, {
       path: '/',
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',

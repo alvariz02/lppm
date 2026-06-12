@@ -1,5 +1,6 @@
 'use client'
 
+import { lazy, Suspense, memo, ComponentType, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import {
@@ -11,20 +12,23 @@ import {
   Handshake,
   TrendingUp,
   Clock,
+  AlertCircle,
+  RefreshCw,
+  Newspaper,
+  Bell,
+  Download,
+  Mail,
+  ClipboardCheck,
 } from 'lucide-react'
 import {
-  Bar,
-  BarChart,
-  Pie,
-  PieChart,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from 'recharts'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
 import {
   ChartContainer,
   ChartTooltip,
@@ -49,6 +53,11 @@ interface StatsData {
   totalResearcher: number
   totalPartner: number
   totalActiveHibah: number
+  totalNews: number
+  totalAnnouncement: number
+  totalDocument: number
+  unreadMessages: number
+  pendingReviews: number
   researchPerYear: { year: number; count: number }[]
   servicePerYear: { year: number; count: number }[]
   publicationsByType: { type: string; count: number }[]
@@ -106,6 +115,8 @@ function useStats() {
       if (!res.ok) throw new Error('Failed to fetch stats')
       return res.json() as Promise<StatsData>
     },
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   })
 }
 
@@ -119,6 +130,37 @@ function formatDate(dateStr: string): string {
     year: 'numeric',
   })
 }
+
+// ============ MEMOIZED STAT CARD ============
+
+interface StatCardProps {
+  icon: ComponentType<{ className?: string }>
+  label: string
+  value: number
+  color: string
+}
+
+const StatCard = memo(function StatCard({ icon: Icon, label, value, color }: StatCardProps) {
+  return (
+    <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
+      <CardContent className="p-6 flex items-center gap-4">
+        <div
+          className={`size-12 rounded-xl flex items-center justify-center shrink-0 ${color}`}
+        >
+          <Icon className="size-6" />
+        </div>
+        <div>
+          <div className="text-2xl font-bold text-foreground tabular-nums">
+            {value}
+          </div>
+          <div className="text-sm text-muted-foreground font-medium">
+            {label}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+})
 
 // ============ SKELETON COMPONENTS ============
 
@@ -149,6 +191,233 @@ function ChartSkeleton() {
   )
 }
 
+// ============ ERROR BOUNDARY FOR CHART SECTIONS ============
+
+function ChartErrorBoundary({ children, title }: { children: React.ReactNode; title: string }) {
+  const [hasError, setHasError] = useState(false)
+  const [errorKey, setErrorKey] = useState(0)
+
+  if (hasError) {
+    return (
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold">{title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+            <AlertCircle className="size-8 text-destructive/50" />
+            <p className="text-sm">Gagal memuat chart</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setHasError(false)
+                setErrorKey((k) => k + 1)
+              }}
+            >
+              <RefreshCw className="size-3.5 mr-1" />
+              Coba Lagi
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <ErrorBoundaryWrapper
+      key={errorKey}
+      onError={() => setHasError(true)}
+    >
+      {children}
+    </ErrorBoundaryWrapper>
+  )
+}
+
+// Simple class-based error boundary wrapper
+import { Component } from 'react'
+
+interface EBProps {
+  children: React.ReactNode
+  onError: () => void
+}
+
+interface EBState {
+  hasError: boolean
+}
+
+class ErrorBoundaryWrapper extends Component<EBProps, EBState> {
+  state: EBState = { hasError: false }
+
+  static getDerivedStateFromError(): EBState {
+    return { hasError: true }
+  }
+
+  componentDidCatch() {
+    this.props.onError()
+  }
+
+  render() {
+    if (this.state.hasError) return null
+    return this.props.children
+  }
+}
+
+// ============ LAZY-LOADED CHART COMPONENTS ============
+
+// We lazy-load the Recharts components which are the heaviest parts
+const LazyResearchChart = lazy(() =>
+  import('recharts').then((mod) => ({
+    default: function ResearchYearChart({ data }: { data: { year: string; count: number }[] }) {
+      return (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold">Penelitian per Tahun</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={researchChartConfig} className="h-64 w-full">
+              <mod.BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                <mod.CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <mod.XAxis dataKey="year" tickLine={false} axisLine={false} fontSize={12} />
+                <mod.YAxis tickLine={false} axisLine={false} fontSize={12} allowDecimals={false} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <mod.Bar
+                  dataKey="count"
+                  fill="var(--color-count)"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={50}
+                />
+              </mod.BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      )
+    },
+  }))
+)
+
+const LazyServiceChart = lazy(() =>
+  import('recharts').then((mod) => ({
+    default: function ServiceYearChart({ data }: { data: { year: string; count: number }[] }) {
+      return (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold">Pengabdian per Tahun</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={serviceChartConfig} className="h-64 w-full">
+              <mod.BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                <mod.CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <mod.XAxis dataKey="year" tickLine={false} axisLine={false} fontSize={12} />
+                <mod.YAxis tickLine={false} axisLine={false} fontSize={12} allowDecimals={false} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <mod.Bar
+                  dataKey="count"
+                  fill="var(--color-count)"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={50}
+                />
+              </mod.BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      )
+    },
+  }))
+)
+
+const LazyPublicationChart = lazy(() =>
+  import('recharts').then((mod) => ({
+    default: function PublicationTypeChart({
+      data,
+    }: {
+      data: { type: string; value: number; fill: string }[]
+    }) {
+      return (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold">
+              Publikasi berdasarkan Jenis
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.length === 0 ? (
+              <div className="h-64 flex items-center justify-center text-muted-foreground text-sm">
+                Belum ada data publikasi
+              </div>
+            ) : (
+              <ChartContainer config={publicationChartConfig} className="h-64 w-full">
+                <mod.PieChart>
+                  <ChartTooltip content={<ChartTooltipContent nameKey="type" />} />
+                  <mod.Pie
+                    data={data}
+                    dataKey="value"
+                    nameKey="type"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={90}
+                    innerRadius={50}
+                    paddingAngle={2}
+                  >
+                    {data.map((_, index) => (
+                      <mod.Cell
+                        key={`cell-${index}`}
+                        fill={PIE_COLORS[index % PIE_COLORS.length]}
+                      />
+                    ))}
+                  </mod.Pie>
+                  <ChartLegend content={<ChartLegendContent nameKey="type" />} />
+                </mod.PieChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+      )
+    },
+  }))
+)
+
+const LazyFundingChart = lazy(() =>
+  import('recharts').then((mod) => ({
+    default: function FundingStatusChart({
+      data,
+    }: {
+      data: { status: string; count: number; fill: string }[]
+    }) {
+      return (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold">
+              Hibah berdasarkan Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.length === 0 ? (
+              <div className="h-64 flex items-center justify-center text-muted-foreground text-sm">
+                Belum ada data hibah
+              </div>
+            ) : (
+              <ChartContainer config={fundingChartConfig} className="h-64 w-full">
+                <mod.BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                  <mod.CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <mod.XAxis dataKey="status" tickLine={false} axisLine={false} fontSize={12} />
+                  <mod.YAxis tickLine={false} axisLine={false} fontSize={12} allowDecimals={false} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <mod.Bar
+                    dataKey="count"
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={60}
+                  />
+                </mod.BarChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+      )
+    },
+  }))
+)
+
 // ============ ANIMATION ============
 
 const container = {
@@ -164,6 +433,77 @@ const item = {
   visible: { opacity: 1, y: 0 },
 }
 
+// ============ STAT CARDS CONFIG ============
+
+const STAT_CARDS = [
+  {
+    icon: FlaskConical,
+    label: 'Total Penelitian',
+    key: 'totalResearch' as const,
+    color: 'bg-primary/10 text-primary',
+  },
+  {
+    icon: HeartHandshake,
+    label: 'Total Pengabdian',
+    key: 'totalCommunityService' as const,
+    color: 'bg-sky-100 text-sky-700',
+  },
+  {
+    icon: FileText,
+    label: 'Total Publikasi',
+    key: 'totalPublication' as const,
+    color: 'bg-emerald-100 text-emerald-700',
+  },
+  {
+    icon: Users,
+    label: 'Total Dosen/Peneliti',
+    key: 'totalResearcher' as const,
+    color: 'bg-amber-100 text-amber-700',
+  },
+  {
+    icon: Banknote,
+    label: 'Hibah Aktif',
+    key: 'totalActiveHibah' as const,
+    color: 'bg-purple-100 text-purple-700',
+  },
+  {
+    icon: Handshake,
+    label: 'Total Mitra',
+    key: 'totalPartner' as const,
+    color: 'bg-rose-100 text-rose-700',
+  },
+  {
+    icon: Newspaper,
+    label: 'Berita',
+    key: 'totalNews' as const,
+    color: 'bg-orange-100 text-orange-700',
+  },
+  {
+    icon: Bell,
+    label: 'Pengumuman',
+    key: 'totalAnnouncement' as const,
+    color: 'bg-cyan-100 text-cyan-700',
+  },
+  {
+    icon: Download,
+    label: 'Dokumen',
+    key: 'totalDocument' as const,
+    color: 'bg-teal-100 text-teal-700',
+  },
+  {
+    icon: Mail,
+    label: 'Pesan Belum Dibaca',
+    key: 'unreadMessages' as const,
+    color: 'bg-red-100 text-red-700',
+  },
+  {
+    icon: ClipboardCheck,
+    label: 'Review Menunggu',
+    key: 'pendingReviews' as const,
+    color: 'bg-yellow-100 text-yellow-700',
+  },
+]
+
 // ============ MAIN PAGE ============
 
 export default function AdminDashboardPage() {
@@ -171,50 +511,13 @@ export default function AdminDashboardPage() {
 
   if (error) {
     return (
-      <div className="text-center py-12 text-destructive">
-        Gagal memuat data dashboard
+      <div className="flex flex-col items-center justify-center py-12 gap-3 text-destructive">
+        <AlertCircle className="size-10" />
+        <p className="text-sm font-medium">Gagal memuat data dashboard</p>
+        <p className="text-xs text-muted-foreground">Coba muat ulang halaman</p>
       </div>
     )
   }
-
-  const statCards = [
-    {
-      icon: FlaskConical,
-      label: 'Total Penelitian',
-      key: 'totalResearch' as const,
-      color: 'bg-primary/10 text-primary',
-    },
-    {
-      icon: HeartHandshake,
-      label: 'Total Pengabdian',
-      key: 'totalCommunityService' as const,
-      color: 'bg-sky-100 text-sky-700',
-    },
-    {
-      icon: FileText,
-      label: 'Total Publikasi',
-      key: 'totalPublication' as const,
-      color: 'bg-emerald-100 text-emerald-700',
-    },
-    {
-      icon: Users,
-      label: 'Total Dosen/Peneliti',
-      key: 'totalResearcher' as const,
-      color: 'bg-amber-100 text-amber-700',
-    },
-    {
-      icon: Banknote,
-      label: 'Total Hibah Aktif',
-      key: 'totalActiveHibah' as const,
-      color: 'bg-purple-100 text-purple-700',
-    },
-    {
-      icon: Handshake,
-      label: 'Total Mitra',
-      key: 'totalPartner' as const,
-      color: 'bg-rose-100 text-rose-700',
-    },
-  ]
 
   // Prepare chart data
   const researchYearData = data?.researchPerYear.map((d) => ({
@@ -264,31 +567,21 @@ export default function AdminDashboardPage() {
       {/* Statistics Cards */}
       <motion.div variants={item}>
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 11 }).map((_, i) => (
               <StatCardSkeleton key={i} />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {statCards.map((stat) => (
-              <Card key={stat.key} className="border-0 shadow-sm hover:shadow-md transition-shadow">
-                <CardContent className="p-6 flex items-center gap-4">
-                  <div
-                    className={`size-12 rounded-xl flex items-center justify-center shrink-0 ${stat.color}`}
-                  >
-                    <stat.icon className="size-6" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-foreground tabular-nums">
-                      {data?.[stat.key] ?? 0}
-                    </div>
-                    <div className="text-sm text-muted-foreground font-medium">
-                      {stat.label}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {STAT_CARDS.map((stat) => (
+              <StatCard
+                key={stat.key}
+                icon={stat.icon}
+                label={stat.label}
+                value={data?.[stat.key] ?? 0}
+                color={stat.color}
+              />
             ))}
           </div>
         )}
@@ -297,138 +590,38 @@ export default function AdminDashboardPage() {
       {/* Charts Row 1: Research & Community Service per Year */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <motion.div variants={item}>
-          {isLoading ? (
-            <ChartSkeleton />
-          ) : (
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold">Penelitian per Tahun</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer config={researchChartConfig} className="h-64 w-full">
-                  <BarChart data={researchYearData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="year" tickLine={false} axisLine={false} fontSize={12} />
-                    <YAxis tickLine={false} axisLine={false} fontSize={12} allowDecimals={false} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar
-                      dataKey="count"
-                      fill="var(--color-count)"
-                      radius={[4, 4, 0, 0]}
-                      maxBarSize={50}
-                    />
-                  </BarChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-          )}
+          <ChartErrorBoundary title="Penelitian per Tahun">
+            <Suspense fallback={<ChartSkeleton />}>
+              <LazyResearchChart data={researchYearData} />
+            </Suspense>
+          </ChartErrorBoundary>
         </motion.div>
 
         <motion.div variants={item}>
-          {isLoading ? (
-            <ChartSkeleton />
-          ) : (
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold">Pengabdian per Tahun</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer config={serviceChartConfig} className="h-64 w-full">
-                  <BarChart data={serviceYearData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="year" tickLine={false} axisLine={false} fontSize={12} />
-                    <YAxis tickLine={false} axisLine={false} fontSize={12} allowDecimals={false} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar
-                      dataKey="count"
-                      fill="var(--color-count)"
-                      radius={[4, 4, 0, 0]}
-                      maxBarSize={50}
-                    />
-                  </BarChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-          )}
+          <ChartErrorBoundary title="Pengabdian per Tahun">
+            <Suspense fallback={<ChartSkeleton />}>
+              <LazyServiceChart data={serviceYearData} />
+            </Suspense>
+          </ChartErrorBoundary>
         </motion.div>
       </div>
 
       {/* Charts Row 2: Publications by Type & Funding by Status */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <motion.div variants={item}>
-          {isLoading ? (
-            <ChartSkeleton />
-          ) : (
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold">Publikasi berdasarkan Jenis</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {publicationTypeData.length === 0 ? (
-                  <div className="h-64 flex items-center justify-center text-muted-foreground text-sm">
-                    Belum ada data publikasi
-                  </div>
-                ) : (
-                  <ChartContainer config={publicationChartConfig} className="h-64 w-full">
-                    <PieChart>
-                      <ChartTooltip content={<ChartTooltipContent nameKey="type" />} />
-                      <Pie
-                        data={publicationTypeData}
-                        dataKey="value"
-                        nameKey="type"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={90}
-                        innerRadius={50}
-                        paddingAngle={2}
-                      >
-                        {publicationTypeData.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={PIE_COLORS[index % PIE_COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <ChartLegend content={<ChartLegendContent nameKey="type" />} />
-                    </PieChart>
-                  </ChartContainer>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          <ChartErrorBoundary title="Publikasi berdasarkan Jenis">
+            <Suspense fallback={<ChartSkeleton />}>
+              <LazyPublicationChart data={publicationTypeData} />
+            </Suspense>
+          </ChartErrorBoundary>
         </motion.div>
 
         <motion.div variants={item}>
-          {isLoading ? (
-            <ChartSkeleton />
-          ) : (
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold">Hibah berdasarkan Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {fundingStatusData.length === 0 ? (
-                  <div className="h-64 flex items-center justify-center text-muted-foreground text-sm">
-                    Belum ada data hibah
-                  </div>
-                ) : (
-                  <ChartContainer config={fundingChartConfig} className="h-64 w-full">
-                    <BarChart data={fundingStatusData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="status" tickLine={false} axisLine={false} fontSize={12} />
-                      <YAxis tickLine={false} axisLine={false} fontSize={12} allowDecimals={false} />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar
-                        dataKey="count"
-                        radius={[4, 4, 0, 0]}
-                        maxBarSize={60}
-                      />
-                    </BarChart>
-                  </ChartContainer>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          <ChartErrorBoundary title="Hibah berdasarkan Status">
+            <Suspense fallback={<ChartSkeleton />}>
+              <LazyFundingChart data={fundingStatusData} />
+            </Suspense>
+          </ChartErrorBoundary>
         </motion.div>
       </div>
 
