@@ -1,8 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase, paginateQuery } from '@/lib/db'
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants'
 import { newsSchema } from '@/lib/validations'
 import { generateSlug } from '@/lib/helpers'
+
+function mapNews(n: Record<string, unknown>) {
+  return {
+    id: n.id,
+    categoryId: n.category_id ?? null,
+    title: n.title,
+    slug: n.slug,
+    excerpt: n.excerpt ?? null,
+    content: n.content,
+    imageUrl: n.image_url ?? null,
+    status: n.status,
+    isFeatured: n.is_featured ?? false,
+    seoTitle: n.seo_title ?? null,
+    seoDescription: n.seo_description ?? null,
+    publishedAt: n.published_at ?? null,
+    createdAt: n.created_at,
+    updatedAt: n.updated_at,
+    category: n.category ? { id: (n.category as Record<string, unknown>).id, name: (n.category as Record<string, unknown>).name } : null,
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,42 +37,46 @@ export async function GET(request: NextRequest) {
     const isFeatured = searchParams.get('isFeatured')
     const search = searchParams.get('search')
 
-    const where: Record<string, unknown> = {}
+    const { from, to } = paginateQuery(page, pageSize)
+
+    let query = supabase
+      .from('news')
+      .select('*, category:news_categories(id, name)', { count: 'exact' })
+      .range(from, to)
 
     if (status) {
-      where.status = status
+      query = query.eq('status', status)
     }
 
     if (categoryId) {
-      where.categoryId = categoryId
+      query = query.eq('category_id', categoryId)
     }
 
     if (isFeatured !== null && isFeatured !== undefined && isFeatured !== '') {
-      where.isFeatured = isFeatured === 'true'
+      query = query.eq('is_featured', isFeatured === 'true')
     }
 
     if (search) {
-      where.OR = [
-        { title: { contains: search } },
-        { excerpt: { contains: search } },
-      ]
+      query = query.or(`title.ilike.%${search}%,excerpt.ilike.%${search}%`)
     }
 
-    const [data, total] = await Promise.all([
-      db.news.findMany({
-        where,
-        include: {
-          category: { select: { id: true, name: true } },
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      db.news.count({ where }),
-    ])
+    query = query.order('created_at', { ascending: false })
+
+    const { data, count, error } = await query
+
+    if (error) {
+      console.error('[API_ADMIN_NEWS_GET]', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch news' },
+        { status: 500 }
+      )
+    }
+
+    const mapped = (data ?? []).map(mapNews)
+    const total = count ?? 0
 
     return NextResponse.json({
-      data,
+      data: mapped,
       total,
       page,
       pageSize,
@@ -73,26 +97,44 @@ export async function POST(request: NextRequest) {
     const validated = newsSchema.parse(body)
 
     const slug = generateSlug(validated.title)
-    const existing = await db.news.findUnique({ where: { slug } })
+    const { data: existing } = await supabase
+      .from('news')
+      .select('id')
+      .eq('slug', slug)
+      .single()
     const finalSlug = existing ? `${slug}-${Date.now()}` : slug
 
-    const news = await db.news.create({
-      data: {
+    const { data, error } = await supabase
+      .from('news')
+      .insert({
         title: validated.title,
         slug: finalSlug,
-        categoryId: validated.categoryId ?? null,
+        category_id: validated.categoryId ?? null,
         excerpt: validated.excerpt ?? null,
         content: validated.content,
-        imageUrl: validated.imageUrl ?? null,
+        image_url: validated.imageUrl ?? null,
         status: validated.status,
-        isFeatured: validated.isFeatured ?? false,
-        seoTitle: validated.seoTitle ?? null,
-        seoDescription: validated.seoDescription ?? null,
-        publishedAt: validated.publishedAt ? new Date(validated.publishedAt) : (validated.status === 'published' ? new Date() : null),
-      },
-    })
+        is_featured: validated.isFeatured ?? false,
+        seo_title: validated.seoTitle ?? null,
+        seo_description: validated.seoDescription ?? null,
+        published_at: validated.publishedAt
+          ? new Date(validated.publishedAt).toISOString()
+          : validated.status === 'published'
+            ? new Date().toISOString()
+            : null,
+      })
+      .select()
+      .single()
 
-    return NextResponse.json({ success: true, data: news }, { status: 201 })
+    if (error) {
+      console.error('[API_ADMIN_NEWS_POST]', error)
+      return NextResponse.json(
+        { error: 'Failed to create news' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true, data: mapNews(data) }, { status: 201 })
   } catch (error: unknown) {
     console.error('[API_ADMIN_NEWS_POST]', error)
     if (error && typeof error === 'object' && 'issues' in error) {

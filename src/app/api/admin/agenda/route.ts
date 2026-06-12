@@ -1,8 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase, paginateQuery } from '@/lib/db'
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants'
 import { agendaSchema } from '@/lib/validations'
 import { generateSlug } from '@/lib/helpers'
+
+function mapAgenda(a: Record<string, unknown>) {
+  return {
+    id: a.id,
+    title: a.title,
+    slug: a.slug,
+    description: a.description ?? null,
+    eventType: a.event_type ?? null,
+    startDate: a.start_date,
+    endDate: a.end_date ?? null,
+    location: a.location ?? null,
+    organizer: a.organizer ?? null,
+    posterUrl: a.poster_url ?? null,
+    status: a.status,
+    createdAt: a.created_at,
+    updatedAt: a.updated_at,
+  }
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,33 +34,37 @@ export async function GET(req: NextRequest) {
     const eventType = searchParams.get('eventType') || ''
     const status = searchParams.get('status') || ''
 
-    const where: Record<string, unknown> = {}
+    const { from, to } = paginateQuery(page, pageSize)
+
+    let query = supabase
+      .from('agenda')
+      .select('*', { count: 'exact' })
+      .range(from, to)
+
     if (search) {
-      where.OR = [
-        { title: { contains: search } },
-        { location: { contains: search } },
-        { organizer: { contains: search } },
-      ]
+      query = query.or(`title.ilike.%${search}%,location.ilike.%${search}%,organizer.ilike.%${search}%`)
     }
     if (eventType) {
-      where.eventType = eventType
+      query = query.eq('event_type', eventType)
     }
     if (status) {
-      where.status = status
+      query = query.eq('status', status)
     }
 
-    const [data, total] = await Promise.all([
-      db.agenda.findMany({
-        where,
-        orderBy: { startDate: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      db.agenda.count({ where }),
-    ])
+    query = query.order('start_date', { ascending: false })
+
+    const { data, count, error } = await query
+
+    if (error) {
+      console.error('[AGENDA_GET]', error)
+      return NextResponse.json({ error: 'Gagal memuat data agenda' }, { status: 500 })
+    }
+
+    const mapped = (data ?? []).map(mapAgenda)
+    const total = count ?? 0
 
     return NextResponse.json({
-      data,
+      data: mapped,
       total,
       page,
       pageSize,
@@ -68,27 +90,38 @@ export async function POST(req: NextRequest) {
 
     // Generate unique slug
     let slug = generateSlug(data.title)
-    const existing = await db.agenda.findUnique({ where: { slug } })
+    const { data: existing } = await supabase
+      .from('agenda')
+      .select('id')
+      .eq('slug', slug)
+      .single()
     if (existing) {
       slug = `${slug}-${Date.now()}`
     }
 
-    const agenda = await db.agenda.create({
-      data: {
+    const { data: agenda, error } = await supabase
+      .from('agenda')
+      .insert({
         title: data.title,
         slug,
         description: data.description || null,
-        eventType: data.eventType || null,
-        startDate: new Date(data.startDate),
-        endDate: data.endDate ? new Date(data.endDate) : null,
+        event_type: data.eventType || null,
+        start_date: data.startDate,
+        end_date: data.endDate || null,
         location: data.location || null,
         organizer: data.organizer || null,
-        posterUrl: data.posterUrl || null,
+        poster_url: data.posterUrl || null,
         status: data.status,
-      },
-    })
+      })
+      .select()
+      .single()
 
-    return NextResponse.json({ data: agenda }, { status: 201 })
+    if (error) {
+      console.error('[AGENDA_POST]', error)
+      return NextResponse.json({ error: 'Gagal membuat agenda' }, { status: 500 })
+    }
+
+    return NextResponse.json({ data: mapAgenda(agenda) }, { status: 201 })
   } catch (error) {
     console.error('[AGENDA_POST]', error)
     return NextResponse.json({ error: 'Gagal membuat agenda' }, { status: 500 })

@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase, paginateQuery } from '@/lib/db'
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants'
 import { generateSlug } from '@/lib/helpers'
+
+function mapNewsCategory(c: Record<string, unknown>) {
+  return {
+    id: c.id,
+    name: c.name,
+    slug: c.slug,
+    createdAt: c.created_at,
+    updatedAt: c.updated_at,
+    _count: { news: c.news_count ?? 0 },
+  }
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,26 +24,44 @@ export async function GET(req: NextRequest) {
     )
     const search = searchParams.get('search') || ''
 
-    const where: Record<string, unknown> = {}
+    const { from, to } = paginateQuery(page, pageSize)
+
+    let query = supabase
+      .from('news_categories')
+      .select('id, name, slug, created_at, updated_at, news:news(count)', { count: 'exact' })
+      .range(from, to)
+
     if (search) {
-      where.name = { contains: search }
+      query = query.ilike('name', `%${search}%`)
     }
 
-    const [data, total] = await Promise.all([
-      db.newsCategory.findMany({
-        where,
-        include: {
-          _count: { select: { news: true } },
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      db.newsCategory.count({ where }),
-    ])
+    query = query.order('created_at', { ascending: false })
+
+    const { data, count, error } = await query
+
+    if (error) {
+      console.error('[NEWS_CATEGORIES_GET]', error)
+      return NextResponse.json({ error: 'Gagal memuat data kategori berita' }, { status: 500 })
+    }
+
+    const mapped = (data ?? []).map((item: Record<string, unknown>) => {
+      // news:news(count) returns an array like [{count: N}] in Supabase
+      const newsAgg = item.news as Array<Record<string, unknown>> | null
+      const newsCount = Array.isArray(newsAgg) && newsAgg.length > 0 ? Number(newsAgg[0].count) : 0
+      return {
+        id: item.id,
+        name: item.name,
+        slug: item.slug,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+        _count: { news: newsCount },
+      }
+    })
+
+    const total = count ?? 0
 
     return NextResponse.json({
-      data,
+      data: mapped,
       total,
       page,
       pageSize,
@@ -56,7 +85,12 @@ export async function POST(req: NextRequest) {
     const slug = generateSlug(name.trim())
 
     // Check slug uniqueness
-    const existing = await db.newsCategory.findUnique({ where: { slug } })
+    const { data: existing } = await supabase
+      .from('news_categories')
+      .select('id')
+      .eq('slug', slug)
+      .single()
+
     if (existing) {
       return NextResponse.json(
         { error: 'Kategori berita dengan nama tersebut sudah ada' },
@@ -64,12 +98,29 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const category = await db.newsCategory.create({
-      data: { name: name.trim(), slug },
-      include: { _count: { select: { news: true } } },
-    })
+    const { data, error } = await supabase
+      .from('news_categories')
+      .insert({ name: name.trim(), slug })
+      .select('id, name, slug, created_at, updated_at, news:news(count)')
+      .single()
 
-    return NextResponse.json({ data: category }, { status: 201 })
+    if (error) {
+      console.error('[NEWS_CATEGORIES_POST]', error)
+      return NextResponse.json({ error: 'Gagal membuat kategori berita' }, { status: 500 })
+    }
+
+    const newsAgg = (data as Record<string, unknown>).news as Array<Record<string, unknown>> | null
+    const newsCount = Array.isArray(newsAgg) && newsAgg.length > 0 ? Number(newsAgg[0].count) : 0
+    const mapped = {
+      id: (data as Record<string, unknown>).id,
+      name: (data as Record<string, unknown>).name,
+      slug: (data as Record<string, unknown>).slug,
+      createdAt: (data as Record<string, unknown>).created_at,
+      updatedAt: (data as Record<string, unknown>).updated_at,
+      _count: { news: newsCount },
+    }
+
+    return NextResponse.json({ data: mapped }, { status: 201 })
   } catch (error) {
     console.error('[NEWS_CATEGORIES_POST]', error)
     return NextResponse.json({ error: 'Gagal membuat kategori berita' }, { status: 500 })

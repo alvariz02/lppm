@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/db'
 import { galleryPhotoSchema } from '@/lib/validations'
+
+function mapGalleryPhoto(p: Record<string, unknown>) {
+  return {
+    id: p.id,
+    albumId: p.album_id ?? null,
+    imageUrl: p.image_url,
+    caption: p.caption ?? null,
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+  }
+}
 
 export async function PUT(
   request: NextRequest,
@@ -11,7 +22,12 @@ export async function PUT(
     const body = await request.json()
     const validated = galleryPhotoSchema.parse(body)
 
-    const existing = await db.galleryPhoto.findUnique({ where: { id: photoId } })
+    const { data: existing } = await supabase
+      .from('gallery_photos')
+      .select('id')
+      .eq('id', photoId)
+      .single()
+
     if (!existing) {
       return NextResponse.json(
         { error: 'Photo not found' },
@@ -19,15 +35,25 @@ export async function PUT(
       )
     }
 
-    const photo = await db.galleryPhoto.update({
-      where: { id: photoId },
-      data: {
-        imageUrl: validated.imageUrl,
+    const { data: photo, error } = await supabase
+      .from('gallery_photos')
+      .update({
+        image_url: validated.imageUrl,
         caption: validated.caption ?? null,
-      },
-    })
+      })
+      .eq('id', photoId)
+      .select()
+      .single()
 
-    return NextResponse.json({ success: true, data: photo })
+    if (error) {
+      console.error('[API_ADMIN_GALLERY_PHOTOS_PUT]', error)
+      return NextResponse.json(
+        { error: 'Failed to update photo' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true, data: mapGalleryPhoto(photo) })
   } catch (error: unknown) {
     console.error('[API_ADMIN_GALLERY_PHOTOS_PUT]', error)
     if (error && typeof error === 'object' && 'issues' in error) {
@@ -50,7 +76,12 @@ export async function DELETE(
   try {
     const { photoId } = await params
 
-    const existing = await db.galleryPhoto.findUnique({ where: { id: photoId } })
+    const { data: existing } = await supabase
+      .from('gallery_photos')
+      .select('id')
+      .eq('id', photoId)
+      .single()
+
     if (!existing) {
       return NextResponse.json(
         { error: 'Photo not found' },
@@ -58,7 +89,15 @@ export async function DELETE(
       )
     }
 
-    await db.galleryPhoto.delete({ where: { id: photoId } })
+    const { error } = await supabase.from('gallery_photos').delete().eq('id', photoId)
+
+    if (error) {
+      console.error('[API_ADMIN_GALLERY_PHOTOS_DELETE]', error)
+      return NextResponse.json(
+        { error: 'Failed to delete photo' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({ success: true, message: 'Photo deleted' })
   } catch (error) {

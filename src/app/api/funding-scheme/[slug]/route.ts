@@ -1,5 +1,26 @@
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+
+function mapFundingScheme(r: any) {
+  return {
+    id: r.id,
+    name: r.name,
+    slug: r.slug,
+    source: r.source,
+    year: r.year,
+    description: r.description,
+    requirements: r.requirements,
+    minBudget: r.min_budget,
+    maxBudget: r.max_budget,
+    openDate: r.open_date,
+    deadline: r.deadline,
+    status: r.status,
+    guideFileUrl: r.guide_file_url,
+    registrationUrl: r.registration_url,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  }
+}
 
 export async function GET(
   request: NextRequest,
@@ -8,42 +29,58 @@ export async function GET(
   try {
     const { slug } = await params
 
-    const fundingScheme = await db.fundingScheme.findUnique({
-      where: { slug },
-      include: {
-        researches: {
-          where: { isPublished: true },
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            year: true,
-            status: true,
-            leader: { select: { id: true, name: true } },
-          },
-        },
-        communityServices: {
-          where: { isPublished: true },
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            year: true,
-            status: true,
-            leader: { select: { id: true, name: true } },
-          },
-        },
-      },
-    })
+    const { data: fundingScheme, error } = await supabase
+      .from('funding_schemes')
+      .select('*')
+      .eq('slug', slug)
+      .single()
 
-    if (!fundingScheme) {
+    if (error || !fundingScheme) {
       return NextResponse.json(
         { error: 'Not found' },
         { status: 404 }
       )
     }
 
-    return NextResponse.json({ data: fundingScheme })
+    // Fetch related published researches
+    const { data: researches } = await supabase
+      .from('research')
+      .select('id, title, slug, year, status, leader:researchers!leader_id(id, name)')
+      .eq('funding_scheme_id', fundingScheme.id)
+      .eq('is_published', true)
+
+    // Fetch related published community services
+    const { data: communityServices } = await supabase
+      .from('community_services')
+      .select('id, title, slug, year, status, leader:researchers!leader_id(id, name)')
+      .eq('funding_scheme_id', fundingScheme.id)
+      .eq('is_published', true)
+
+    const mappedResearches = (researches || []).map((r: any) => ({
+      id: r.id,
+      title: r.title,
+      slug: r.slug,
+      year: r.year,
+      status: r.status,
+      leader: r.leader || null,
+    }))
+
+    const mappedCommunityServices = (communityServices || []).map((s: any) => ({
+      id: s.id,
+      title: s.title,
+      slug: s.slug,
+      year: s.year,
+      status: s.status,
+      leader: s.leader || null,
+    }))
+
+    const result = {
+      ...mapFundingScheme(fundingScheme),
+      researches: mappedResearches,
+      communityServices: mappedCommunityServices,
+    }
+
+    return NextResponse.json({ data: result })
   } catch (error) {
     console.error('[API_FUNDING_SCHEME_GET]', error)
     return NextResponse.json(

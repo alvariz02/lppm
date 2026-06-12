@@ -1,0 +1,1749 @@
+     1→# Work Log
+     2→
+     3→## Task 3: Update Global CSS Theme for LPPM Website
+     4→
+     5→**Date:** 2026-03-05
+     6→**File Modified:** `/home/z/my-project/src/app/globals.css`
+     7→
+     8→### Changes Made
+     9→
+    10→#### 1. Light Mode (`:root`) Color Variables
+    11→- `--primary`: Changed from grayscale black to dark navy `oklch(0.35 0.1 250)` (#1e3a5f)
+    12→- `--primary-foreground`: White `oklch(1 0 0)` (unchanged, already white)
+    13→- `--secondary`: Changed from light gray to sky blue `oklch(0.62 0.21 255)` (#3b82f6)
+    14→- `--secondary-foreground`: Changed to white `oklch(1 0 0)`
+    15→- `--accent`: Changed from light gray to golden yellow `oklch(0.78 0.17 75)` (#f59e0b)
+    16→- `--accent-foreground`: Changed to dark navy `oklch(0.35 0.1 250)`
+    17→- `--foreground`: Changed from pure black to dark gray with blue tint `oklch(0.22 0.03 250)`
+    18→- `--card-foreground`, `--popover-foreground`: Same dark gray-blue as foreground
+    19→- `--muted`: Light gray with blue tint `oklch(0.96 0.01 250)`
+    20→- `--muted-foreground`: Medium gray with blue tint `oklch(0.55 0.03 250)`
+    21→- `--border`, `--input`: Light gray with blue tint `oklch(0.92 0.01 250)`
+    22→- `--ring`: Sky blue `oklch(0.62 0.21 255)`
+    23→- `--destructive`: Kept original red value
+    24→
+    25→#### 2. Dark Mode (`.dark`) Color Variables
+    26→- `--background`: Very dark blue-gray `oklch(0.15 0.04 250)`
+    27→- `--foreground`: Light gray with blue tint `oklch(0.93 0.01 250)`
+    28→- `--primary`: Sky blue `oklch(0.62 0.21 255)` (swapped from light mode)
+    29→- `--primary-foreground`: Dark navy `oklch(0.35 0.1 250)`
+    30→- `--secondary`: Darker blue `oklch(0.45 0.2 260)` (#1e40af)
+    31→- `--secondary-foreground`: White `oklch(1 0 0)`
+    32→- `--accent`: Golden yellow `oklch(0.78 0.17 75)` (same as light mode)
+    33→- `--accent-foreground`: Dark navy `oklch(0.35 0.1 250)`
+    34→- `--card`, `--popover`: Dark blue-gray `oklch(0.2 0.05 250)`
+    35→- `--muted`: Dark blue `oklch(0.25 0.05 250)`
+    36→- `--muted-foreground`: Medium gray-blue `oklch(0.65 0.04 250)`
+    37→- `--ring`: Sky blue `oklch(0.62 0.21 255)`
+    38→
+    39→#### 3. Chart Colors Updated (both modes)
+    40→- `--chart-1`: Dark navy (primary blue)
+    41→- `--chart-2`: Sky blue (secondary blue)
+    42→- `--chart-3`: Golden yellow (accent)
+    43→- `--chart-4`: Teal `oklch(0.65 0.13 195)`
+    44→- `--chart-5`: Indigo `oklch(0.48 0.18 275)`
+    45→
+    46→#### 4. Sidebar Colors Updated
+    47→- Both light and dark sidebar colors updated to match the LPPM navy/blue theme
+    48→
+    49→#### 5. Custom Utility Classes Added
+    50→- **Smooth scroll:** `html { scroll-behavior: smooth; }` added to `@layer base`
+    51→- **Custom scrollbar:** Thin 8px scrollbar with rounded thumb, themed track/thumb colors using CSS variables
+    52→- **Focus ring:** `*:focus-visible` with 2px solid ring color and 2px offset
+    53→
+    54→### Structure Preserved
+    55→- All imports, `@custom-variant`, `@theme inline` block, and `@layer base` structure kept intact
+    56→- Only color values were changed; no structural modifications
+    57→
+    58→---
+    59→
+    60→## Task 4-b: Create Public Layout Components
+    61→
+    62→**Date:** 2026-03-05
+    63→**Files Created:**
+    64→- `/home/z/my-project/src/components/layout/Navbar.tsx`
+    65→- `/home/z/my-project/src/components/layout/Footer.tsx`
+    66→- `/home/z/my-project/src/components/layout/PublicLayout.tsx`
+    67→
+    68→**File Modified:**
+    69→- `/home/z/my-project/src/app/page.tsx` (updated to use PublicLayout wrapper)
+    70→
+    71→### 1. Navbar.tsx
+    72→
+    73→A responsive navigation bar component with the following features:
+    74→
+    75→- **Client component** (`'use client'`) with Framer Motion fade-in animation on mount
+    76→- **Sticky positioning** (`sticky top-0 z-50`) with smooth scroll-based background transition
+    77→  - At top: white background with subtle shadow
+    78→  - When scrolled: `bg-white/90 backdrop-blur-md` with stronger shadow
+    79→- **Desktop navigation** (hidden on mobile, visible at `lg:` breakpoint):
+    80→  - Logo area with `GraduationCap` icon + "LPPM" text
+    81→  - Navigation links: Beranda, Profil, Kerja Sama, Agenda, Galeri, Kontak as direct links
+    82→  - "Akademik" dropdown menu containing: Penelitian, Pengabdian, Publikasi, Hibah
+    83→  - "Info" dropdown menu containing: Berita, Pengumuman, Dokumen
+    84→  - Active link highlighting using `usePathname()` — primary color with `bg-primary/10`
+    85→- **Right side actions:**
+    86→  - Search button (magnifying glass icon, ghost variant)
+    87→  - Admin login button (`outline` variant, links to `/login`, hidden on small screens)
+    88→- **Mobile navigation** (visible below `lg:` breakpoint):
+    89→  - Hamburger menu button using `Sheet` component from shadcn/ui
+    90→  - Sheet slides from right side (300px/350px width)
+    91→  - All navigation links listed vertically with active state highlighting
+    92→  - Close on link click
+    93→  - Login Admin button in sheet footer
+    94→- **shadcn/ui components used:** Sheet, SheetContent, SheetTrigger, SheetTitle, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
+    95→- **lucide-react icons used:** Menu, Search, GraduationCap, ChevronDown, LogIn, X
+    96→
+    97→### 2. Footer.tsx
+    98→
+    99→A professional campus footer component:
+   100→
+   101→- **Dark navy background** (`bg-primary`) with white/light text (`text-primary-foreground`)
+   102→- **4-column responsive grid layout:**
+   103→  - Mobile: 1 column
+   104→  - Tablet (`sm:`): 2 columns
+   105→  - Desktop (`lg:`): 4 columns
+   106→- **Column 1 (Logo & Description):**
+   107→  - `GraduationCap` icon (accent color) + "LPPM" text as home link
+   108→  - Short Indonesian description of LPPM
+   109→  - Social media icons: Facebook, Instagram, Youtube — circular buttons with hover effect (accent color)
+   110→- **Column 2 (Tautan Cepat / Quick Links):**
+   111→  - Heading with accent color + separator
+   112→  - Links: Beranda, Profil, Kerja Sama, Agenda, Galeri, Kontak
+   113→- **Column 3 (Layanan / Services):**
+   114→  - Heading with accent color + separator
+   115→  - Links: Penelitian, Pengabdian, Publikasi, Hibah, Dokumen
+   116→- **Column 4 (Kontak / Contact):**
+   117→  - Heading with accent color + separator
+   118→  - Address with `MapPin` icon
+   119→  - Email with `Mail` icon
+   120→  - Phone with `Phone` icon
+   121→  - WhatsApp with `Phone` icon
+   122→- **Bottom bar:**
+   123→  - Separator line
+   124→  - Copyright text: "© 2024 LPPM Kampus. All rights reserved."
+   125→- All links use Next.js `Link` component for client-side navigation
+   126→- **lucide-react icons used:** GraduationCap, Facebook, Instagram, Youtube, MapPin, Mail, Phone
+   127→
+   128→### 3. PublicLayout.tsx
+   129→
+   130→A simple wrapper component that composes the layout:
+   131→
+   132→- `'use client'` directive
+   133→- `min-h-screen flex flex-col` container for sticky footer pattern
+   134→- Navbar at top, main content in flexible middle area, Footer at bottom
+   135→- `flex-1` on `<main>` ensures content pushes footer down when needed
+   136→
+   137→### 4. page.tsx Updated
+   138→
+   139→- Updated to use `PublicLayout` wrapper
+   140→- Simple welcome content for testing the layout components
+   141→
+   142→### Design Decisions
+   143→
+   144→- Used CSS variable-based theme colors (`text-primary`, `bg-primary`, `text-accent`, etc.) from the existing globals.css setup (Task 3)
+   145→- All interactive elements have hover/focus states for accessibility
+   146→- Mobile-first responsive design with Tailwind breakpoints
+   147→- Subtle animations: Framer Motion for navbar mount, CSS transitions for scroll effects and hover states
+   148→- Consistent spacing and padding following the LPPM theme
+   149→
+   150→
+   151→---
+   152→
+   153→## Task 5-a: Create Public-Facing API Routes
+   154→
+   155→**Date:** 2026-03-05
+   156→**Files Created/Updated:** 15 API route files under `/home/z/my-project/src/app/api/`
+   157→
+   158→### Routes Created
+   159→
+   160→| # | File Path | Method | Description |
+   161→|---|-----------|--------|-------------|
+   162→| 1 | `api/stats/route.ts` | GET | Dashboard statistics: totalResearch, totalCommunityService, totalPublication, totalResearcher, totalPartner, totalFundingScheme, ongoingResearch, completedResearch, ongoingService, completedService, totalActiveHibah |
+   163→| 2 | `api/research/route.ts` | GET | Paginated research list with filters: year, status, fundingSchemeId, facultyId, search, featured. Includes leader, faculty, fundingScheme, members relations. Only published. |
+   164→| 3 | `api/community-service/route.ts` | GET | Paginated community service list with same filters as research. Includes leader, faculty, fundingScheme, members. Only published. |
+   165→| 4 | `api/publication/route.ts` | GET | Paginated publications with filters: publicationType, year, search. Includes research, service, publicationAuthors. Only published. |
+   166→| 5 | `api/funding-scheme/route.ts` | GET | Active funding schemes with optional year filter. |
+   167→| 6 | `api/news/route.ts` | GET | Paginated published news with filters: categoryId, search, featured. Includes category relation. |
+   168→| 7 | `api/announcement/route.ts` | GET | Active announcements only. |
+   169→| 8 | `api/partner/route.ts` | GET | Active partners only. |
+   170→| 9 | `api/agenda/route.ts` | GET | Agenda with filters: status (default 'upcoming'), eventType. Ordered by startDate asc. |
+   171→| 10 | `api/gallery/route.ts` | GET | Gallery albums with photos. Optional category filter. |
+   172→| 11 | `api/contact/route.ts` | POST | Contact message submission. Validates with contactMessageSchema (Zod). Returns 201 on success, 400 on validation error. |
+   173→| 12 | `api/document/route.ts` | GET | Active documents with optional categoryId filter. Includes category relation. |
+   174→| 13 | `api/reviewer/route.ts` | GET | Active reviewers only. Ordered by name. |
+   175→| 14 | `api/lppm-profile/route.ts` | GET | First LppmProfile record or 404. |
+   176→| 15 | `api/site-settings/route.ts` | GET | First SiteSetting record or 404. |
+   177→
+   178→### Design Decisions
+   179→
+   180→- **Pagination format**: `{ data, total, page, pageSize, totalPages }` for all paginated endpoints
+   181→- **Non-paginated endpoints** return `{ data }` directly
+   182→- **Search**: Uses Prisma `contains` filter (SQLite is case-insensitive by default)
+   183→- **Error handling**: try/catch with console.error and appropriate HTTP status codes (400, 404, 500)
+   184→- **Validation**: Contact POST uses Zod `contactMessageSchema` from `@/lib/validations`
+   185→- **Constants**: Uses `DEFAULT_PAGE_SIZE` from `@/lib/constants`
+   186→- All imports use `import { db } from '@/lib/db'`
+   187→- Responses use `NextResponse.json()`
+   188→- No admin POST/PUT/DELETE routes created (will be done separately)
+   189→
+   190→### Testing
+   191→All 15 endpoints verified working via curl. Key test results:
+   192→- Stats returns all 11 fields with correct counts from seed data
+   193→- Research search filter works (tested with "iklim" search term)
+   194→- Pagination works correctly with page/pageSize params
+   195→- Contact POST validates input and returns 400 with Zod error details
+   196→- Contact POST creates record successfully with 201 status
+   197→
+   198→---
+   199→
+   200→## Task 5-b: Create Homepage (Beranda)
+   201→
+   202→**Date:** 2026-03-05
+   203→**Files Created:**
+   204→- `/home/z/my-project/src/components/Providers.tsx` — React Query provider wrapper
+   205→- `/home/z/my-project/seed.ts` — Database seeder with LPPM sample data
+   206→
+   207→**Files Modified:**
+   208→- `/home/z/my-project/src/app/layout.tsx` — Added Providers wrapper around children
+   209→- `/home/z/my-project/src/app/page.tsx` — Complete homepage with 9 sections
+   210→
+   211→### 1. Providers.tsx
+   212→
+   213→React Query provider component:
+   214→- `'use client'` directive
+   215→- Uses `useState` to create `QueryClient` instance (prevents re-creation on re-render)
+   216→- Default stale time: 60 seconds
+   217→- `refetchOnWindowFocus: false`
+   218→
+   219→### 2. Root Layout Updated
+   220→
+   221→Added `Providers` import and wrapped `PublicLayout` + `Toaster` with `<Providers>` in the root layout.
+   222→
+   223→### 3. Database Seeding (seed.ts)
+   224→
+   225→Seeded the database with comprehensive LPPM sample data:
+   226→- **News Categories**: Penelitian, Pengabdian, Hibah
+   227→- **News**: 3 featured articles with categories and excerpts
+   228→- **Announcements**: 5 active announcements (3 important, 2 normal)
+   229→- **Faculties**: 2 faculties (FTE, FISIP)
+   230→- **Study Programs**: 3 programs (Teknik Informatika, Teknik Elektro, Administrasi Publik)
+   231→- **Researchers**: 3 researchers across faculties
+   232→- **Funding Schemes**: 1 active internal research grant
+   233→- **Research**: 3 featured research projects with leaders and abstracts
+   234→- **Community Services**: 3 featured community service projects with locations
+   235→- **Publications**: 5 publications (international journals, national journals, proceedings)
+   236→- **Partners**: 6 active partners (government, industry, university, NGO)
+   237→
+   238→### 4. Homepage (page.tsx) — 9 Sections
+   239→
+   240→Complete `'use client'` homepage with the following sections:
+   241→
+   242→#### Section 1: Hero Section
+   243→- Full-width gradient background (navy blue → sky blue)
+   244→- Decorative geometric shapes with Framer Motion floating animations
+   245→- Grid pattern overlay at 4% opacity
+   246→- Large heading with "Pengabdian" in accent (golden yellow) color
+   247→- Sub-heading text
+   248→- 3 CTA buttons: "Lihat Penelitian" (accent bg), "Lihat Pengabdian" (glass outline), "Download Panduan" (glass outline)
+   249→- Staggered Framer Motion entrance animation
+   250→
+   251→#### Section 2: Statistics Section
+   252→- 6 stat cards in responsive grid (1/2/3 cols)
+   253→- Each card: icon + number + label
+   254→- Stats: Total Penelitian, Total Pengabdian, Total Publikasi, Total Dosen/Peneliti, Total Mitra Kerja Sama, Total Hibah Aktif
+   255→- Icons: FlaskConical, HeartHandshake, BookOpen, Users, Handshake, Award
+   256→- Cards with hover effect (lift + shadow)
+   257→- Data fetched from `/api/stats` via TanStack Query
+   258→- Skeleton loading state
+   259→
+   260→#### Section 3: Berita Terbaru Section
+   261→- 3 featured news cards in horizontal grid
+   262→- Each card: gradient image placeholder, category badge, title, excerpt, date
+   263→- "Lihat Semua Berita" button linking to /berita
+   264→- Data fetched from `/api/news?featured=true&pageSize=3`
+   265→
+   266→#### Section 4: Pengumuman Terbaru Section
+   267→- List of 5 latest announcements
+   268→- Each item: icon, title, date, "Penting" badge for important ones
+   269→- "Lihat Semua Pengumuman" link
+   270→- Data fetched from `/api/announcement`
+   271→
+   272→#### Section 5: Penelitian Unggulan Section
+   273→- 3 featured research cards
+   274→- Each card: status badge, year badge, title, abstract (truncated), leader name, funding source
+   275→- "Lihat Semua Penelitian" link
+   276→- Data fetched from `/api/research?featured=true&pageSize=3`
+   277→
+   278→#### Section 6: Pengabdian Unggulan Section
+   279→- 3 featured community service cards
+   280→- Each card: status badge, year badge, title, summary (truncated), location, leader name
+   281→- "Lihat Semua Pengabdian" link
+   282→- Data fetched from `/api/community-service?featured=true&pageSize=3`
+   283→
+   284→#### Section 7: Publikasi Terbaru Section
+   285→- List of 5 latest publications
+   286→- Each item: type badge, year badge, title, authors, journal name
+   287→- "Lihat Semua Publikasi" link
+   288→- Data fetched from `/api/publication?pageSize=5`
+   289→
+   290→#### Section 8: Mitra Kerja Sama Section
+   291→- Grid of up to 6 partner cards
+   292→- Each card: emoji icon based on type, name, type badge, cooperation type
+   293→- "Lihat Semua Mitra" link
+   294→- Data fetched from `/api/partner`
+   295→
+   296→#### Section 9: CTA Section
+   297→- Gradient navy blue background with decorative elements
+   298→- "Hubungi LPPM" heading
+   299→- Description text
+   300→- 2 buttons: "Hubungi Kami" (accent, links to /kontak), "Download Panduan" (glass outline, links to /dokumen)
+   301→
+   302→### Technical Implementation
+   303→
+   304→- **Data Fetching**: 7 custom `useQuery` hooks using TanStack Query, each with proper error handling
+   305→- **Animations**: Framer Motion `whileInView` for scroll-triggered animations, stagger containers for card grids
+   306→- **Loading States**: Custom skeleton components (StatsSkeleton, NewsSkeleton, ListSkeleton, CardGridSkeleton)
+   307→- **Empty States**: Graceful empty state displays with icons and messages
+   308→- **Error States**: Error messages for failed API calls
+   309→- **Responsive Design**: Mobile-first with Tailwind breakpoints (sm:, md:, lg:, xl:)
+   310→- **Color Scheme**: Uses LPPM theme variables (primary=navy, secondary=sky blue, accent=golden yellow)
+   311→- **shadcn/ui**: Card, CardContent, CardHeader, CardTitle, Badge, Button, Skeleton components
+   312→- **lucide-react**: FlaskConical, HeartHandshake, BookOpen, Users, Handshake, Award, ArrowRight, Megaphone, MapPin, FileText, Building2, Download, Phone, ChevronRight, AlertCircle
+   313→
+   314→### Lint & Build
+   315→- ESLint passes with no errors
+   316→- All API endpoints return 200 status
+   317→- Homepage compiles and renders correctly
+   318→
+   319→---
+   320→
+   321→## Task 7-b: Create Public Pages (Pengumuman, Dokumen, Reviewer, Kerjasama, Agenda, Galeri, Kontak)
+   322→
+   323→**Date:** 2026-03-05
+   324→**Files Created:**
+   325→- `/home/z/my-project/src/app/pengumuman/page.tsx` — Announcements page
+   326→- `/home/z/my-project/src/app/dokumen/page.tsx` — Documents page
+   327→- `/home/z/my-project/src/app/reviewer/page.tsx` — Reviewers page
+   328→- `/home/z/my-project/src/app/kerjasama/page.tsx` — Partners page
+   329→- `/home/z/my-project/src/app/agenda/page.tsx` — Agenda/Events page
+   330→- `/home/z/my-project/src/app/galeri/page.tsx` — Gallery page
+   331→- `/home/z/my-project/src/app/kontak/page.tsx` — Contact page
+   332→
+   333→**Files Modified:**
+   334→- `/home/z/my-project/src/app/api/document/route.ts` — Added PATCH endpoint for download count increment
+   335→
+   336→### 1. Pengumuman Page (`/pengumuman`)
+   337→
+   338→- **Hero banner**: "Pengumuman" with gradient navy→sky blue background, decorative shapes, grid pattern
+   339→- **Content**: Accordion-based expandable list of announcements
+   340→- Each announcement displays: title, published date, "Penting" badge for important ones
+   341→- Click to expand/collapse reveals full content text and attachment link
+   342→- Important announcements have red icon + red "Penting" badge
+   343→- Normal announcements have primary-colored icon + "Biasa" badge
+   344→- Data fetched from `/api/announcement` via TanStack Query `useQuery`
+   345→- Uses `Accordion`, `AccordionItem`, `AccordionTrigger`, `AccordionContent` from shadcn/ui
+   346→- Loading skeleton, empty state, error state all implemented
+   347→- Framer Motion stagger animation on initial load
+   348→
+   349→### 2. Dokumen Page (`/dokumen`)
+   350→
+   351→- **Hero banner**: "Dokumen Unduhan" with gradient background
+   352→- **Category filter**: Select dropdown fetching categories from document data
+   353→- **Table layout**: Displays documents with file type icon, title, description, category, download count, download button
+   354→- File type icons: `FileText` for PDF/Word, `FileSpreadsheet` for Excel/CSV, `FileImage` for images
+   355→- Color-coded file type icons (red for PDF, emerald for Excel, sky for Word, purple for images)
+   356→- Download button opens file URL and calls PATCH `/api/document` to increment download count
+   357→- Toast notification on download success/failure
+   358→- Responsive table with hidden columns on mobile (category, download count shown inline on mobile)
+   359→- Uses `Table`, `TableHeader`, `TableBody`, `TableRow`, `TableCell`, `TableHead` from shadcn/ui
+   360→- Loading skeleton, empty state, error state
+   361→
+   362→### 3. Reviewer Page (`/reviewer`)
+   363→
+   364→- **Hero banner**: "Reviewer / Mitra Bestari" with gradient background
+   365→- **Filter**: Select dropdown for reviewer type (Internal/Eksternal)
+   366→- **Grid layout**: 1/2/3 columns responsive grid of reviewer cards
+   367→- Each reviewer card: avatar with initials, name, NIDN, institution, expertise badges, type badge (Internal/Eksternal)
+   368→- Expertise field split by comma into individual badges
+   369→- Email shown at bottom of card with separator
+   370→- Type badges color-coded (primary for internal, sky for external)
+   371→- Counter showing total reviewers matching filter
+   372→- "Lihat Semua Reviewer" button when filter has no results
+   373→- Loading skeleton, empty state, error state
+   374→
+   375→### 4. Kerjasama Page (`/kerjasama`)
+   376→
+   377→- **Hero banner**: "Kerja Sama / Mitra" with gradient background
+   378→- **Filter**: Select dropdown for partner type (Pemerintah, Industri, LSM/NGO, Universitas, Komunitas, Lainnya)
+   379→- **Grid layout**: 1/2/3 columns responsive grid of partner cards
+   380→- Each partner card: logo placeholder (emoji based on type), name, type badge, cooperation type, address, date range, status badge
+   381→- Logo area shows emoji for type (🏛️🏭🤝🎓👥🏢) or actual logo if available
+   382→- Status badges: Aktif (green), Tidak Aktif (gray), Kedaluwarsa (red)
+   383→- Counter showing total partners matching filter
+   384→- Loading skeleton, empty state, error state
+   385→
+   386→### 5. Agenda Page (`/agenda`)
+   387→
+   388→- **Hero banner**: "Agenda Kegiatan" with gradient background
+   389→- **Filters**: Two Select dropdowns — Status (Akan Datang, Berlangsung, Selesai, Dibatalkan) and Event Type (Seminar, Workshop, Sosialisasi, Monev, Deadline, Pelatihan)
+   390→- **Card-based timeline**: Each agenda card with date badge (day + month), title, event type badge, status badge, date range, location, organizer
+   391→- Date badge uses primary color with day number and abbreviated month
+   392→- Event type badges color-coded (primary for seminar, sky for workshop, emerald for sosialisasi, amber for monev, red for deadline, purple for pelatihan)
+   393→- Event type emojis: 🎤🔧📢📊⏰📚
+   394→- Counter showing total events matching filter
+   395→- "Reset Filter" button when no results
+   396→- Loading skeleton, empty state, error state
+   397→
+   398→### 6. Galeri Page (`/galeri`)
+   399→
+   400→- **Hero banner**: "Galeri Kegiatan" with gradient background
+   401→- **Category filter**: Select dropdown for gallery categories (Penelitian, Pengabdian Masyarakat, Seminar, Workshop)
+   402→- **Grid layout**: Album cards with cover image placeholder
+   403→- Each album card: gradient/cover image, category badge, photo count overlay, title, description, date
+   404→- **Photo dialog**: Click album to open modal dialog showing photos
+   405→- Dialog features: photo navigation (prev/next arrows), thumbnail strip, caption display, photo counter
+   406→- Responsive dialog (95vw max, max-w-4xl) with dark background
+   407→- Loading skeleton, empty state, error state
+   408→
+   409→### 7. Kontak Page (`/kontak`)
+   410→
+   411→- **Hero banner**: "Hubungi Kami" with gradient background
+   412→- **Two-column layout**: Left = contact info, Right = contact form
+   413→- **Left column**:
+   414→  - Contact info cards: Address, Email (mailto link), Phone (tel link), WhatsApp (wa.me link)
+   415→  - Each card has colored icon + label + clickable value
+   416→  - Office hours card: Senin-Kamis 08:00-16:00, Jumat 08:00-11:30, Sabtu-Minggu Tutup
+   417→  - Google Maps embed: iframe if googleMapsUrl is set, otherwise gray placeholder
+   418→- **Right column**:
+   419→  - Contact form with react-hook-form + Zod validation
+   420→  - Fields: Name (required), Email (required, validated), Phone (optional), Subject (optional), Message (required)
+   421→  - Uses `contactMessageSchema` from `@/lib/validations` for validation
+   422→  - Submit via `useMutation` to POST `/api/contact`
+   423→  - Success toast: "Pesan berhasil dikirim!"
+   424→  - Error toast: "Gagal mengirim pesan"
+   425→  - Form resets on successful submission
+   426→  - Loading spinner during submission
+   427→  - Red border + error message for invalid fields
+   428→- Loading skeleton, error state
+   429→
+   430→### API Enhancement
+   431→
+   432→Added PATCH endpoint to `/api/document/route.ts`:
+   433→- Accepts `{ id: string }` in request body
+   434→- Increments `downloadCount` by 1 using Prisma atomic update
+   435→- Returns updated document data
+   436→- 400 if no ID provided, 500 on server error
+   437→
+   438→### Technical Implementation (All Pages)
+   439→
+   440→- **Data Fetching**: TanStack Query `useQuery` for all GET requests, `useMutation` for contact form POST
+   441→- **Animations**: Framer Motion `fadeInUp` and stagger variants on all pages
+   442→- **Hero Banners**: Consistent gradient (navy→sky blue) with decorative shapes and grid pattern
+   443→- **Loading States**: Custom skeleton components matching each page layout
+   444→- **Empty States**: Icon + heading + description pattern
+   445→- **Error States**: Red icon + error message + suggestion text
+   446→- **Responsive Design**: Mobile-first with Tailwind breakpoints (sm:, md:, lg:)
+   447→- **shadcn/ui Components**: Card, Badge, Button, Skeleton, Accordion, Table, Select, Dialog, Input, Textarea, Separator
+   448→- **Constants**: `ANNOUNCEMENT_TYPE_LABELS`, `REVIEWER_TYPE_LABELS`, `PARTNER_TYPE_LABELS`, `PARTNER_STATUS_LABELS`, `AGENDA_EVENT_TYPE_LABELS`, `AGENDA_STATUS_LABELS`, `GALLERY_CATEGORY_LABELS`, `GALLERY_CATEGORY_OPTIONS`, `PARTNER_TYPE_OPTIONS`, `AGENDA_EVENT_TYPE_OPTIONS`, `AGENDA_STATUS_OPTIONS`, `PARTNER_STATUS_COLORS`, `AGENDA_STATUS_COLORS` from `@/lib/constants`
+   449→- **Helpers**: `formatDate`, `truncateText`, `getInitials`, `getStatusColor` from `@/lib/helpers`
+   450→- **Validation**: `contactMessageSchema` from `@/lib/validations`
+   451→
+   452→### Lint & Testing
+   453→- All 7 pages return HTTP 200
+   454→- No new lint errors introduced (2 pre-existing errors in admin/layout.tsx and hooks/useAuth.ts)
+   455→- All pages compile and render correctly in dev server
+   456→
+   457→---
+   458→
+   459→## Task 7-a: Create Public Pages (Profil, Penelitian, Pengabdian, Publikasi, Hibah, Berita)
+   460→
+   461→**Date:** 2026-03-05
+   462→**Files Created:**
+   463→- `/home/z/my-project/src/app/profil/page.tsx` — LPPM Profile page
+   464→- `/home/z/my-project/src/app/penelitian/page.tsx` — Research listing page
+   465→- `/home/z/my-project/src/app/pengabdian/page.tsx` — Community Service listing page
+   466→- `/home/z/my-project/src/app/publikasi/page.tsx` — Publications listing page
+   467→- `/home/z/my-project/src/app/hibah/page.tsx` — Funding Schemes page
+   468→- `/home/z/my-project/src/app/berita/page.tsx` — News listing page
+   469→
+   470→**Files Modified:**
+   471→- `/home/z/my-project/src/app/api/funding-scheme/route.ts` — Added status filter support (active/closed)
+   472→
+   473→### 1. Profil Page (`/profil`)
+   474→
+   475→LPPM Profile page with the following sections:
+   476→
+   477→- **Hero banner**: "Profil LPPM" with gradient navy→sky blue background, decorative shapes, grid pattern overlay
+   478→- **About section**: Card displaying LPPM description text from `/api/lppm-profile`, with Building2 icon header
+   479→- **Chairman's greeting**: Card with photo placeholder (User icon fallback), chairman name, role, and italic blockquote message with left accent border
+   480→- **Vision/Mission/Goals/Duties**: Accordion component (shadcn/ui) with all 4 sections expandable, each with colored icon:
+   481→  - Visi (Eye icon, primary color)
+   482→  - Misi (Target icon, sky color)
+   483→  - Tujuan (ClipboardList icon, emerald color)
+   484→  - Tugas & Fungsi (ClipboardList icon, amber color)
+   485→  - Default: all expanded (`type="multiple"`)
+   486→- **Organization structure**: Card with Network icon header, image display if `structureImageUrl` exists, otherwise gradient placeholder
+   487→- **Contact info**: Card with MapPin icon header, grid of contact items from `/api/site-settings` (Address, Email, Phone, WhatsApp), each with icon, label, and clickable link
+   488→- Data fetched from `/api/lppm-profile` and `/api/site-settings` via TanStack Query
+   489→- Loading skeleton, empty state, error state
+   490→
+   491→### 2. Penelitian Page (`/penelitian`)
+   492→
+   493→Research listing page with filters and pagination:
+   494→
+   495→- **Hero banner**: "Penelitian" with FlaskConical icon badge, gradient background
+   496→- **Filter bar**: Card with 4 filter controls in responsive grid:
+   497→  - Search input (with Search icon prefix) for title search
+   498→  - Year select dropdown (current year - 10 years)
+   499→  - Status select dropdown (Draft, Berlangsung, Selesai, Dibatalkan)
+   500→  - Funding scheme select dropdown
+   501→- **Research cards**: Responsive grid (1/2/3 columns), each card:
+   502→  - Status badge with color from `PROJECT_STATUS_COLORS`
+   503→  - Year badge (outline)
+   504→  - Title (line-clamp-2)
+   505→  - Abstract truncated to 150 chars via `truncateText`
+   506→  - Footer: leader name with User icon, funding source badge
+   507→  - Hover: lift + shadow effect
+   508→- **Pagination**: Page numbers with ellipsis, prev/next buttons, "Menampilkan X - Y dari Z" counter
+   509→- Data fetched from `/api/research` with query params
+   510→- Loading skeleton (6 cards), empty state with FlaskConical icon, error state
+   511→- Filters reset page to 1 on change
+   512→
+   513→### 3. Pengabdian Page (`/pengabdian`)
+   514→
+   515→Community Service listing page:
+   516→
+   517→- **Hero banner**: "Pengabdian kepada Masyarakat" with HeartHandshake icon badge
+   518→- **Filter bar**: 3 controls — search (title + location), year select, status select
+   519→- **Service cards**: Responsive grid, each card:
+   520→  - Status badge + year badge
+   521→  - Title (line-clamp-2)
+   522→  - Summary truncated to 150 chars
+   523→  - Footer: location with MapPin icon, leader name with User icon
+   524→  - Location combines village, district, regency, and location fields
+   525→- **Pagination**: Same pattern as penelitian
+   526→- Data fetched from `/api/community-service`
+   527→- Loading skeleton, empty state with HeartHandshake icon, error state
+   528→
+   529→### 4. Publikasi Page (`/publikasi`)
+   530→
+   531→Publications listing page:
+   532→
+   533→- **Hero banner**: "Publikasi Ilmiah" with BookOpen icon badge
+   534→- **Filter bar**: 3 controls — search, publication type select (all 8 types from `PUBLICATION_TYPE_LABELS`), year select
+   535→- **Publication list**: Stacked card layout (not grid), each card:
+   536→  - Type badge with color from `pubTypeColorMap` (8 distinct colors)
+   537→  - Year badge, accreditation badge, indexing badge
+   538→  - Title (font-semibold, line-clamp-2)
+   539→  - Author names (from `authors` field or `publicationAuthors` relation)
+   540→  - Journal name in italic
+   541→  - Volume/Number/Pages metadata
+   542→  - DOI link with ExternalLink icon (auto-prefixed with https://doi.org/ if not full URL)
+   543→  - Generic URL link if no DOI
+   544→- **Pagination**: Same pattern
+   545→- Data fetched from `/api/publication`
+   546→- Loading skeleton (5 list items), empty state with BookOpen icon
+   547→
+   548→### 5. Hibah Page (`/hibah`)
+   549→
+   550→Funding Schemes page:
+   551→
+   552→- **Hero banner**: "Hibah dan Pendanaan" with Award icon badge
+   553→- **Filter bar**: 2 controls — status select (Semua/Aktif/Ditutup), year select (5 years)
+   554→- **Funding scheme cards**: Responsive grid (1/2/3 columns), each card:
+   555→  - Status badge with `FUNDING_SCHEME_STATUS_COLORS`
+   556→  - Year badge
+   557→  - "Segera Tutup" badge (orange) if deadline ≤ 14 days and active
+   558→  - Title (line-clamp-2)
+   559→  - Description truncated to 180 chars
+   560→  - Source info with Banknote icon
+   561→  - Budget range with formatCurrency (Mulai/Maks. prefixes for partial ranges)
+   562→  - Deadline with Clock icon and `formatDate`
+   563→  - Footer: "Daftar" button (links to registrationUrl if available), "Panduan" button (links to guideFileUrl)
+   564→- **No pagination** (funding schemes typically small dataset)
+   565→- Data fetched from `/api/funding-scheme` with status/year params
+   566→- Loading skeleton (6 cards), empty state with Award icon
+   567→
+   568→### 6. Berita Page (`/berita`)
+   569→
+   570→News listing page:
+   571→
+   572→- **Hero banner**: "Berita LPPM" with Newspaper icon badge
+   573→- **Filter bar**: 2 controls — search input, category select
+   574→- **Featured news**: Highlighted at top of page 1 (when no filters active):
+   575→  - Large card with 2-column grid layout (image left, content right)
+   576→  - Gold "Berita Utama" badge with Star icon
+   577→  - Category badge + date
+   578→  - Title (larger font, xl/2xl)
+   579→  - Excerpt (line-clamp-4)
+   580→- **News cards**: Responsive grid (1/2/3 columns), each card:
+   581→  - Gradient image placeholder (5 rotating gradient styles)
+   582→  - Category badge (white, top-left)
+   583→  - "Utama" badge (accent, top-right) for featured items
+   584→  - Title (line-clamp-2)
+   585→  - Excerpt truncated to 120 chars
+   586→  - Date footer
+   587→- **Pagination**: Same pattern
+   588→- Featured news fetched separately from `/api/news?featured=true&pageSize=1`
+   589→- Main list from `/api/news` with filters
+   590→- Featured item excluded from grid on page 1 to avoid duplication
+   591→- Loading skeleton (featured + 6 grid cards), empty state with Newspaper icon
+   592→
+   593→### API Enhancement
+   594→
+   595→Updated `/api/funding-scheme/route.ts`:
+   596→- Added `status` query parameter support
+   597→- Default behavior: shows both 'active' and 'closed' (excludes 'draft')
+   598→- Supports `?status=active` or `?status=closed` for specific filtering
+   599→- Previously hardcoded to only show `status: 'active'`
+   600→
+   601→### Technical Implementation (All Pages)
+   602→
+   603→- **Data Fetching**: TanStack Query `useQuery` for all GET requests
+   604→- **Animations**: Framer Motion `motion.div` with `initial={{ opacity: 0, y: 20 }}` and `whileInView={{ opacity: 1, y: 0 }}` for all section animations
+   605→- **Hero Banners**: Consistent gradient (navy→sky blue) with decorative blur circles and grid pattern overlay
+   606→- **Loading States**: Custom skeleton components matching each page's layout
+   607→- **Empty States**: Relevant icon + heading + suggestion pattern
+   608→- **Error States**: Red error message
+   609→- **Responsive Design**: Mobile-first with Tailwind breakpoints (sm:, md:, lg:)
+   610→- **shadcn/ui Components**: Card, CardContent, CardHeader, CardTitle, CardFooter, Badge, Button, Input, Skeleton, Select, Accordion, AccordionItem, AccordionTrigger, AccordionContent
+   611→- **Constants**: `PROJECT_STATUS_LABELS`, `PROJECT_STATUS_COLORS`, `PUBLICATION_TYPE_LABELS`, `FUNDING_SCHEME_STATUS_LABELS`, `FUNDING_SCHEME_STATUS_COLORS`, `DEFAULT_PAGE_SIZE` from `@/lib/constants`
+   612→- **Helpers**: `formatDate`, `formatCurrency`, `truncateText` from `@/lib/helpers`
+   613→
+   614→### Lint & Testing
+   615→- All 6 pages return HTTP 200
+   616→- ESLint passes with no errors on new files
+   617→- All pages compile successfully in dev server (first compile ~450ms, subsequent <15ms)
+   618→- No new lint errors introduced
+   619→
+   620→---
+   621→
+   622→## Task 8: Admin Layout with Sidebar, Login Page, and Dashboard
+   623→
+   624→**Date:** 2026-03-05
+   625→**Files Created:**
+   626→- `/home/z/my-project/src/hooks/useAuth.ts` — Custom authentication hook
+   627→- `/home/z/my-project/src/app/api/auth/login/route.ts` — Login API endpoint
+   628→- `/home/z/my-project/src/app/api/auth/logout/route.ts` — Logout API endpoint
+   629→- `/home/z/my-project/src/app/login/page.tsx` — Admin login page
+   630→- `/home/z/my-project/src/app/admin/layout.tsx` — Admin layout with sidebar
+   631→- `/home/z/my-project/src/app/admin/page.tsx` — Admin dashboard page
+   632→
+   633→**Files Modified:**
+   634→- `/home/z/my-project/src/components/layout/PublicLayout.tsx` — Added path exclusion for admin/login routes
+   635→- `/home/z/my-project/src/app/api/stats/route.ts` — Enhanced with chart data (per-year stats, groupBy, recent activity)
+   636→- `/home/z/my-project/seed.ts` — Added admin Profile records for authentication
+   637→
+   638→### 1. useAuth Hook (`/src/hooks/useAuth.ts`)
+   639→
+   640→Custom React hook for client-side authentication state management:
+   641→- **State**: `user` (AuthUser | null), `loading` (boolean), `isAuthenticated` (derived boolean)
+   642→- **Methods**: `login(userData)`, `logout()`
+   643→- **Storage**: Uses `localStorage` with key `lppm_admin` for persistence
+   644→- **Lazy initialization**: Uses `useState(() => getStoredUser())` to read from localStorage on mount (avoiding SSR issues with `typeof window === 'undefined'` check)
+   645→- **AuthUser interface**: `{ id, email, fullName, role }`
+   646→- **Helper function**: `getStoredUser()` safely parses localStorage with error handling, validates required fields, cleans up invalid entries
+   647→
+   648→### 2. Login API Route (`/api/auth/login`)
+   649→
+   650→POST endpoint for admin authentication:
+   651→- **Request body**: `{ email: string, password: string }`
+   652→- **Validation**: Returns 400 if email or password is missing
+   653→- **Authentication logic**: Checks if email exists in Profile table and `isActive` is true
+   654→- **Response on success**: `{ success: true, data: { id, email, fullName, role } }`
+   655→- **Response on failure**: 401 with error message "Email tidak terdaftar atau akun tidak aktif"
+   656→- **Error handling**: 500 for server errors with console.error logging
+   657→- **Note**: Password validation is simplified (any password accepted) since Profile model doesn't have a password field — this is a demo setup
+   658→
+   659→### 3. Logout API Route (`/api/auth/logout`)
+   660→
+   661→POST endpoint that returns success response:
+   662→- **Response**: `{ success: true, message: "Logout berhasil" }`
+   663→- Actual token/session clearing is done client-side via the `useAuth` hook
+   664→
+   665→### 4. Login Page (`/login`)
+   666→
+   667→Professional login page with LPPM branding:
+   668→- **Layout**: Centered card on full-screen gradient background (navy → sky blue)
+   669→- **Decorative elements**: Blurred circles, grid pattern overlay
+   670→- **Card content**:
+   671→  - LPPM logo (GraduationCap icon in primary-colored rounded square)
+   672→  - Title: "Login Admin LPPM"
+   673→  - Subtitle: "Lembaga Penelitian dan Pengabdian kepada Masyarakat"
+   674→  - Email field with Mail icon prefix
+   675→  - Password field with Lock icon prefix
+   676→  - Submit button with loading state (Loader2 spinner)
+   677→  - Footer text with admin contact suggestion
+   678→- **Form handling**: react-hook-form with zodResolver validation (email format, password required)
+   679→- **Authentication flow**:
+   680→  1. Submit to POST `/api/auth/login`
+   681→  2. On success: store user data via `useAuth.login()`, show success toast, redirect to `/admin`
+   682→  3. On failure: show error toast with API error message
+   683→  4. On network error: show "Terjadi kesalahan jaringan" toast
+   684→- **Animations**: Framer Motion fade-in for card, scale-in for logo
+   685→- **shadcn/ui**: Card, CardHeader, CardContent, Button, Input, Form, FormField, FormItem, FormLabel, FormControl, FormMessage
+   686→- **sonner**: Toast notifications for success/error messages
+   687→
+   688→### 5. Admin Layout (`/admin/layout.tsx`)
+   689→
+   690→Full admin layout with sidebar navigation:
+   691→- **Authentication guard**: Uses `useAuth` hook, redirects to `/login` if not authenticated
+   692→- **Loading state**: Pulsing logo animation while checking auth
+   693→- **Desktop sidebar** (≥lg breakpoint):
+   694→  - Fixed width 280px, dark navy background (`bg-primary`)
+   695→  - Collapse/expand toggle button (72px collapsed width)
+   696→  - Logo section: GraduationCap icon + "LPPM" text + "Admin Panel" subtitle
+   697→  - 20 navigation items with lucide-react icons, each with active state highlighting
+   698→  - Active items: white/15 background, accent-colored icon
+   699→  - Inactive items: 75% opacity text, hover effect
+   700→  - Logout button at bottom with red hover effect
+   701→  - ScrollArea for menu overflow
+   702→- **Mobile sidebar** (<lg breakpoint):
+   703→  - Hamburger menu button in header
+   704→  - Slides in from left with Framer Motion spring animation
+   705→  - Dark overlay backdrop
+   706→  - Close on link click via `onNavigate` callback
+   707→  - Same navigation items as desktop
+   708→- **Top header bar**:
+   709→  - Sticky positioning with white background and shadow
+   710→  - Page title derived from current route
+   711→  - Admin name and role badge (from `useAuth.user`)
+   712→  - Logout button with red styling
+   713→- **Main content area**: Flexible with padding, overflow scroll
+   714→- **Navigation items** (20 items):
+   715→  1. Dashboard → /admin
+   716→  2. Profil LPPM → /admin/profil
+   717→  3. Dosen/Peneliti → /admin/researchers
+   718→  4. Fakultas → /admin/faculties
+   719→  5. Program Studi → /admin/study-programs
+   720→  6. Penelitian → /admin/research
+   721→  7. Pengabdian → /admin/community-service
+   722→  8. Publikasi → /admin/publications
+   723→  9. Hibah/Pendanaan → /admin/funding
+   724→  10. Berita → /admin/news
+   725→  11. Pengumuman → /admin/announcements
+   726→  12. Dokumen Unduhan → /admin/documents
+   727→  13. Reviewer → /admin/reviewers
+   728→  14. Review Proposal → /admin/reviews
+   729→  15. Kerja Sama → /admin/partners
+   730→  16. Agenda → /admin/agenda
+   731→  17. Galeri → /admin/gallery
+   732→  18. Pesan Kontak → /admin/messages
+   733→  19. User Admin → /admin/users
+   734→  20. Pengaturan → /admin/settings
+   735→
+   736→### 6. Admin Dashboard Page (`/admin`)
+   737→
+   738→Comprehensive dashboard overview with statistics, charts, and recent activity:
+   739→- **Statistics cards** (6 cards in responsive 1/2/3 grid):
+   740→  - Total Penelitian (FlaskConical, primary color)
+   741→  - Total Pengabdian (HeartHandshake, sky color)
+   742→  - Total Publikasi (FileText, emerald color)
+   743→  - Total Dosen/Peneliti (Users, amber color)
+   744→  - Total Hibah Aktif (Banknote, purple color)
+   745→  - Total Mitra (Handshake, rose color)
+   746→- **Charts** (4 charts using Recharts with shadcn/ui ChartContainer):
+   747→  1. **Bar chart**: Penelitian per Tahun (last 5 years) — primary navy color
+   748→  2. **Bar chart**: Pengabdian per Tahun (last 5 years) — sky blue color
+   749→  3. **Pie chart**: Publikasi berdasarkan Jenis — 8-color palette for publication types
+   750→  4. **Bar chart**: Hibah berdasarkan Status — gray/green/red for draft/active/closed
+   751→- **Recent activity section**:
+   752→  - Combined list of 5 most recent research, community services, and news
+   753→  - Each item: colored icon, title (truncated), status badge, creation date
+   754→  - Color-coded by type: primary for research, sky for community service, amber for news
+   755→- **Chart configs**: Proper ChartConfig objects for tooltip/legend labels
+   756→- **Data fetching**: TanStack Query `useQuery` from `/api/stats`
+   757→- **Loading states**: Skeleton components for cards and charts
+   758→- **Empty states**: Centered text for charts with no data
+   759→- **Animations**: Framer Motion stagger container with fade-up items
+   760→
+   761→### 7. PublicLayout Modification
+   762→
+   763→Updated `PublicLayout.tsx` to conditionally render Navbar/Footer:
+   764→- Uses `usePathname()` to check current route
+   765→- Excluded paths: `/admin`, `/login` (and all sub-paths)
+   766→- For excluded paths: renders children only (no Navbar/Footer wrapper)
+   767→- For all other paths: renders Navbar + main + Footer layout
+   768→
+   769→### 8. Stats API Enhancement
+   770→
+   771→Enhanced `/api/stats/route.ts` with additional data for admin dashboard charts:
+   772→- **researchPerYear**: Array of `{ year, count }` for last 5 years
+   773→- **servicePerYear**: Array of `{ year, count }` for last 5 years
+   774→- **publicationsByType**: Grouped by `publicationType` using Prisma `groupBy`
+   775→- **fundingByStatus**: Grouped by `status` using Prisma `groupBy`
+   776→- **recentResearch**: 5 most recent research entries (id, title, status, year, createdAt)
+   777→- **recentServices**: 5 most recent community services (id, title, status, year, createdAt)
+   778→- **recentNews**: 5 most recent news (id, title, status, createdAt)
+   779→- All new data fetched via `Promise.all` alongside existing stats
+   780→
+   781→### 9. Seed Data Update
+   782→
+   783→Added admin Profile records to `seed.ts`:
+   784→- **Super Admin**: `admin@lppm.ac.id` / fullName: "Admin LPPM" / role: super_admin
+   785→- **Editor**: `editor@lppm.ac.id` / fullName: "Editor LPPM" / role: editor
+   786→- Both with `isActive: true` and `upsert` pattern for idempotent seeding
+   787→
+   788→---
+   789→
+   790→## Task 10-b: Create Admin CRUD Pages for Publications, Funding, News, Announcements, Documents
+   791→
+   792→**Date:** 2026-03-05
+   793→**Files Created:**
+   794→
+   795→### API Routes (10 files)
+   796→
+   797→| # | File Path | Methods | Description |
+   798→|---|-----------|---------|-------------|
+   799→| 1 | `api/admin/publications/route.ts` | GET, POST | List publications (paginated, filterable by publicationType/year/isPublished/search) + Create publication with Zod validation |
+   800→| 2 | `api/admin/publications/[id]/route.ts` | GET, PUT, DELETE | Get/Update/Delete single publication by ID |
+   801→| 3 | `api/admin/funding/route.ts` | GET, POST | List funding schemes (paginated, filterable by status/year/search) + Create with Zod validation + deadline > openDate refine |
+   802→| 4 | `api/admin/funding/[id]/route.ts` | GET, PUT, DELETE | Get/Update/Delete single funding scheme by ID |
+   803→| 5 | `api/admin/news/route.ts` | GET, POST | List news (paginated, filterable by status/categoryId/isFeatured/search) + Create with Zod validation |
+   804→| 6 | `api/admin/news/[id]/route.ts` | GET, PUT, DELETE | Get/Update/Delete single news by ID |
+   805→| 7 | `api/admin/announcements/route.ts` | GET, POST | List announcements (paginated, filterable by status/type/search) + Create with Zod validation |
+   806→| 8 | `api/admin/announcements/[id]/route.ts` | GET, PUT, DELETE | Get/Update/Delete single announcement by ID |
+   807→| 9 | `api/admin/documents/route.ts` | GET, POST | List documents (paginated, filterable by categoryId/isActive/search) + Create with Zod validation |
+   808→| 10 | `api/admin/documents/[id]/route.ts` | GET, PUT, DELETE | Get/Update/Delete single document by ID |
+   809→
+   810→### Admin Pages (5 files)
+   811→
+   812→| # | File Path | Module | Description |
+   813→|---|-----------|--------|-------------|
+   814→| 1 | `admin/publications/page.tsx` | Publikasi | DataTable with Title, Type (badge), Year, Authors, Journal, Status columns. Add/Edit dialog with all publication fields including researchId/serviceId selects. Delete confirmation. |
+   815→| 2 | `admin/funding/page.tsx` | Hibah/Pendanaan | DataTable with Name, Source, Year, Budget Range, Deadline, Status columns. Add/Edit dialog with date inputs for openDate/deadline, budget fields, validation deadline > openDate. Delete confirmation. |
+   816→| 3 | `admin/news/page.tsx` | Berita | DataTable with Title, Category, Status, Featured, Published Date columns. Add/Edit dialog with category select, content textarea, SEO fields, isFeatured checkbox. Delete confirmation. |
+   817→| 4 | `admin/announcements/page.tsx` | Pengumuman | DataTable with Title, Type (badge), Status, Published Date columns. Add/Edit dialog with type select (normal/important), status select (draft/active/inactive), date fields. Delete confirmation. |
+   818→| 5 | `admin/documents/page.tsx` | Dokumen Unduhan | DataTable with Title, Category, File Type, Downloads, Active columns. Add/Edit dialog with category select, file metadata fields, isActive checkbox, read-only download count. Delete confirmation. |
+   819→
+   820→### API Route Implementation Details
+   821→
+   822→All API routes follow a consistent pattern:
+   823→- **GET (list)**: Paginated with `page`, `pageSize` query params, returns `{ data, total, page, pageSize, totalPages }`
+   824→- **GET (single)**: Returns `{ data: item }` or 404
+   825→- **POST**: Validates body with Zod schema from `@/lib/validations`, auto-generates slug via `generateSlug()` from `@/lib/helpers`, returns 201 on success with `{ success: true, data }`
+   826→- **PUT**: Same validation as POST, checks existence first (404 if not found), handles slug collision with `slug-timestamp` pattern
+   827→- **DELETE**: Checks existence first (404 if not found), returns `{ success: true, message }`
+   828→- **Error handling**: try/catch with `console.error`, Zod validation errors return 400 with `{ error, details }`, server errors return 500
+   829→- **Dynamic route params**: Uses `{ params }: { params: Promise<{ id: string }> }` → `const { id } = await params` (Next.js 16 pattern)
+   830→- **Database**: All routes use `import { db } from '@/lib/db'` (Prisma client)
+   831→- **Slug generation**: `generateSlug()` from `@/lib/helpers`, with timestamp suffix for collision avoidance
+   832→
+   833→### Admin Page Implementation Details
+   834→
+   835→All 5 admin pages follow a consistent pattern:
+   836→- **`'use client'`** directive for client-side rendering
+   837→- **TanStack Query**: `useQuery` for data fetching, `useMutation` for create/update/delete operations
+   838→- **react-hook-form + zodResolver**: Form validation using Zod schemas from `@/lib/validations`
+   839→- **sonner toast**: Success/error notifications on CRUD operations
+   840→- **shadcn/ui components**: Dialog (add/edit), AlertDialog (delete confirmation), Card, Badge, Button, Input, Textarea, Select, Table, Skeleton, Checkbox, Label
+   841→- **Search**: Input with Search icon, debounced search triggers page reset
+   842→- **Pagination**: Simple prev/next with page counter, uses `DEFAULT_PAGE_SIZE` from constants
+   843→- **Responsive**: Tables with `overflow-x-auto`, hidden columns on mobile (`hidden md:table-cell`, `hidden lg:table-cell`)
+   844→- **Status badges**: Color-coded using `getStatusColor()` from helpers + specific label maps from constants
+   845→- **Framer Motion**: Fade-in animation on page mount
+   846→- **Loading states**: Skeleton rows while data loads
+   847→- **Empty states**: Centered text when no data
+   848→
+   849→### Module-Specific Features
+   850→
+   851→**Publications**:
+   852→- Form fields: title, publicationType (8 options from PUBLICATION_TYPE_OPTIONS), authors, publisherName, journalName, year, volume, number, pages, issn, isbn, doi, url, indexing, accreditation, researchId (optional select), serviceId (optional select), isPublished
+   853→- Research/Community Service selects fetched from public API endpoints when dialog opens
+   854→- `_none` placeholder value for nullable selects (researchId, serviceId)
+   855→
+   856→**Funding**:
+   857→- Budget range display using `formatCurrency()` from helpers
+   858→- Date inputs (type="date") for openDate and deadline
+   859→- Deadline validation built into Zod schema (`.refine()` ensuring deadline > openDate)
+   860→- Budget fields use `setValueAs` to convert empty strings to null
+   861→
+   862→**News**:
+   863→- Featured indicator with Star icon (filled amber for featured items)
+   864→- Content as Textarea (6 rows)
+   865→- Category select fetched from `/api/news/categories`
+   866→- Auto-set publishedAt when status changes to 'published'
+   867→
+   868→**Announcements**:
+   869→- Type badge with red border for "important" type
+   870→- Date inputs for publishedAt and expiredAt
+   871→- Auto-set publishedAt when status changes to 'active'
+   872→
+   873→**Documents**:
+   874→- Download count displayed in table (read-only)
+   875→- File type shown as uppercase Badge (secondary variant)
+   876→- Category select fetched from `/api/document/categories`
+   877→- isActive shown as status badge (Aktif/Nonaktif)
+   878→- Read-only download count field in edit form
+   879→
+   880→### Lint & Testing
+   881→
+   882→- All 5 admin pages return HTTP 200
+   883→- All 5 API list endpoints return HTTP 200 with valid JSON
+   884→- ESLint: 0 errors, 7 warnings (all React Compiler incompatible library warnings for `form.watch()` — same pattern as existing pages)
+   885→- No new lint errors introduced
+   886→- Dev server compiles and serves all pages correctly
+   887→- Stats API returns all fields including chart data
+   888→- All pages compile successfully in dev server
+   889→
+   890→
+   891→---
+   892→
+   893→## Task 11: SEO, Error Handling, and Middleware
+   894→
+   895→**Date:** 2026-03-05
+   896→**Files Created:**
+   897→- `/home/z/my-project/src/app/sitemap.ts` — Dynamic sitemap generation
+   898→- `/home/z/my-project/src/app/robots.ts` — Robots.txt generation
+   899→- `/home/z/my-project/src/app/not-found.tsx` — Custom 404 page
+   900→- `/home/z/my-project/src/app/loading.tsx` — Global loading page
+   901→- `/home/z/my-project/src/app/error.tsx` — Global error boundary
+   902→- `/home/z/my-project/src/middleware.ts` — Admin route protection middleware
+   903→
+   904→**Files Modified:**
+   905→- `/home/z/my-project/src/app/api/auth/login/route.ts` — Added auth cookie on login
+   906→- `/home/z/my-project/src/app/api/auth/logout/route.ts` — Clear auth cookie on logout
+   907→- `/home/z/my-project/src/hooks/useAuth.ts` — Clear cookie on client-side logout
+   908→- `/home/z/my-project/src/app/admin/layout.tsx` — Call logout API on admin logout
+   909→
+   910→### 1. sitemap.ts
+   911→
+   912→Dynamic sitemap generation for SEO:
+   913→- **Static pages**: 14 pages (home, profil, penelitian, pengabdian, publikasi, hibah, berita, pengumuman, dokumen, reviewer, kerjasama, agenda, galeri, kontak) with appropriate changeFrequency and priority values
+   914→- **Dynamic pages**: Fetched from database (research, community service, publication, news, announcement, funding schemes) with their `updatedAt` timestamps
+   915→- **Fallback**: If database query fails, returns only static pages
+   916→- Uses `NEXT_PUBLIC_SITE_URL` environment variable with fallback to `https://lppm.kampus.ac.id`
+   917→
+   918→### 2. robots.ts
+   919→
+   920→Robots.txt configuration:
+   921→- Allows all user agents to crawl `/`
+   922→- Disallows: `/admin`, `/api/`, `/login`
+   923→- Points to sitemap at `{baseUrl}/sitemap.xml`
+   924→
+   925→### 3. not-found.tsx
+   926→
+   927→Custom 404 page with LPPM branding:
+   928→- **'use client'** directive
+   929→- Centered content with gradient background
+   930→- Large "404" text (8xl font, primary/20 color)
+   931→- FileQuestion icon in primary-colored circle
+   932→- "Halaman Tidak Ditemukan" heading
+   933→- Description text explaining the error
+   934→- "Kembali ke Beranda" button (Home icon, links to /)
+   935→- "Halaman Sebelumnya" button (ArrowLeft icon, uses history.back())
+   936→- Footer text with LPPM name
+   937→- Responsive layout (stacked buttons on mobile, inline on desktop)
+   938→
+   939→### 4. loading.tsx
+   940→
+   941→Global loading page:
+   942→- Centered spinner/skeleton on full-screen background
+   943→- GraduationCap icon in primary-colored rounded square
+   944→- Ping animation around the logo
+   945→- "LPPM" text with "Memuat halaman..." subtitle
+   946→- Three animated bouncing dots
+   947→- Simple and professional design matching LPPM theme
+   948→
+   949→### 5. error.tsx
+   950→
+   951→Global error boundary:
+   952→- **'use client'** directive (required for error.tsx)
+   953→- Console error logging on mount
+   954→- AlertCircle icon in destructive-colored circle
+   955→- "Terjadi Kesalahan" heading
+   956→- Description text with error digest ID if available
+   957→- "Coba Lagi" button (RotateCcw icon, calls reset())
+   958→- "Kembali ke Beranda" button (Home icon, links to /)
+   959→- Responsive layout with stacked/inline buttons
+   960→- LPPM footer text
+   961→
+   962→### 6. middleware.ts
+   963→
+   964→Admin route protection middleware:
+   965→- Checks for `lppm_auth` cookie on all `/admin/*` routes
+   966→- If cookie is missing, redirects to `/login`
+   967→- Uses Next.js middleware with `matcher: ['/admin/:path*']`
+   968→- Works alongside client-side auth check in admin layout (defense in depth)
+   969→
+   970→### 7. Login API Update
+   971→
+   972→Updated `/api/auth/login/route.ts`:
+   973→- Sets `lppm_auth=1` cookie on successful login
+   974→- Cookie options: path=/, httpOnly=false, sameSite=lax, maxAge=7 days
+   975→- Secure flag enabled in production environment
+   976→
+   977→### 8. Logout API Update
+   978→
+   979→Updated `/api/auth/logout/route.ts`:
+   980→- Clears `lppm_auth` cookie by setting maxAge=0
+   981→- Returns success JSON response
+   982→
+   983→### 9. useAuth Hook Update
+   984→
+   985→Updated `useAuth.ts`:
+   986→- `logout()` function now also clears `lppm_auth` cookie via `document.cookie`
+   987→- Ensures cookie is cleared even if only client-side logout is called
+   988→
+   989→### 10. Admin Layout Update
+   990→
+   991→Updated `admin/layout.tsx`:
+   992→- Both logout handlers (sidebar + header) now call `/api/auth/logout` before client-side cleanup
+   993→- Ensures server-side cookie is properly cleared on logout
+   994→- Error handling: ignores API errors, still proceeds with local logout
+   995→
+   996→### Lint & Testing
+   997→- ESLint passes with no new errors (9 pre-existing react-hooks/incompatible-library warnings)
+   998→- All new files compile successfully
+   999→- Pre-existing dev server issue with conflicting dynamic route slug names in gallery API (not from this task)
+  1000→
+  1001→## Task 10-a: Create Admin CRUD Pages for LPPM Profile, Reviewers, Reviews, Partners, Agenda
+  1002→
+  1003→**Date:** 2026-03-05
+  1004→**Files Created:**
+  1005→
+  1006→### API Routes
+  1007→- `/home/z/my-project/src/app/api/admin/lppm-profile/route.ts` — GET (first record) + PUT (upsert)
+  1008→- `/home/z/my-project/src/app/api/admin/reviewers/route.ts` — GET (paginated) + POST
+  1009→- `/home/z/my-project/src/app/api/admin/reviewers/[id]/route.ts` — GET + PUT + DELETE
+  1010→- `/home/z/my-project/src/app/api/admin/reviews/route.ts` — GET (paginated) + POST
+  1011→- `/home/z/my-project/src/app/api/admin/reviews/[id]/route.ts` — GET + PUT + DELETE
+  1012→- `/home/z/my-project/src/app/api/admin/partners/route.ts` — GET (paginated) + POST
+  1013→- `/home/z/my-project/src/app/api/admin/partners/[id]/route.ts` — GET + PUT + DELETE
+  1014→- `/home/z/my-project/src/app/api/admin/agenda/route.ts` — GET (paginated) + POST
+  1015→- `/home/z/my-project/src/app/api/admin/agenda/[id]/route.ts` — GET + PUT + DELETE
+  1016→
+  1017→### Admin Pages
+  1018→- `/home/z/my-project/src/app/admin/profil/page.tsx` — LPPM Profile form page with preview
+  1019→- `/home/z/my-project/src/app/admin/reviewers/page.tsx` — Reviewers DataTable with CRUD
+  1020→- `/home/z/my-project/src/app/admin/reviews/page.tsx` — Proposal Reviews DataTable with CRUD
+  1021→- `/home/z/my-project/src/app/admin/partners/page.tsx` — Partners DataTable with CRUD
+  1022→- `/home/z/my-project/src/app/admin/agenda/page.tsx` — Agenda DataTable with CRUD
+  1023→
+  1024→---
+  1025→
+  1026→### 1. Admin Profil LPPM (`/admin/profil`)
+  1027→
+  1028→**NOT a DataTable** — this is a form page with live preview:
+  1029→- **Form fields**: about (textarea), vision (textarea), mission (textarea), goals (textarea), duties (textarea), chairmanName, chairmanPhotoUrl, chairmanMessage (textarea), structureImageUrl
+  1030→- **Save button** that PUTs to `/api/admin/lppm-profile` with upsert pattern
+  1031→- **Preview card** on the right side (desktop only) showing how the profile looks
+  1032→- **API**: GET returns first LppmProfile record or null; PUT uses upsert (create if not exists, update if exists)
+  1033→- **Responsive**: 2-column layout on desktop (form + preview), single column on mobile
+  1034→- **Loading skeleton** while fetching existing data
+  1035→- **Auto-populates** form with existing data on load via `useQuery` + `onSuccess`
+  1036→
+  1037→### 2. Admin Reviewers (`/admin/reviewers`)
+  1038→
+  1039→**DataTable** with full CRUD:
+  1040→- **Table columns**: Name, NIDN, Institution, Expertise, Type (Internal/External badge with colors), Active status, Actions
+  1041→- **Filters**: Search (name, NIDN, email, institution), Type filter (Internal/Eksternal), Active status filter
+  1042→- **Form dialog**: name (required), nidn, nip, email, phone, institution, expertise, reviewerType (required, select from REVIEWER_TYPE_OPTIONS), isActive (switch)
+  1043→- **Type badges**: Internal = green outline, External = purple outline
+  1044→- **Status badges**: Aktif = green, Tidak Aktif = yellow (via getStatusColor)
+  1045→- **Validation**: Uses `reviewerSchema` from `@/lib/validations`
+  1046→- **API includes**: researcher relation and proposalReviews count
+  1047→
+  1048→### 3. Admin Review Proposal (`/admin/reviews`)
+  1049→
+  1050→**DataTable** with full CRUD:
+  1051→- **Table columns**: Proposal Type (badge), Proposal Title, Reviewer name, Score, Status (badge with PROPOSAL_REVIEW_STATUS_COLORS), Reviewed At, Actions
+  1052→- **Filters**: Search (proposal title, reviewer name), Proposal Type filter, Status filter
+  1053→- **Form dialog**: proposalType (research/community_service select), researchId (select from research list, shown when type=research), serviceId (select from community service list, shown when type=community_service), reviewerId (select from reviewers), score (0-100 number input), notes (textarea), status (select from PROPOSAL_REVIEW_STATUS_OPTIONS), reviewFileUrl, reviewedAt (datetime-local)
+  1054→- **Dynamic form**: researchId/serviceId fields toggle based on proposalType
+  1055→- **Status badges**: Waiting=yellow, Reviewing=blue, Revision=orange, Accepted=green, Rejected=red
+  1056→- **Validation**: Inline Zod schema (proposalReviewSchema) with proper type constraints
+  1057→- **API includes**: research, service, and reviewer relations
+  1058→
+  1059→### 4. Admin Partners - Kerja Sama (`/admin/partners`)
+  1060→
+  1061→**DataTable** with full CRUD:
+  1062→- **Table columns**: Name, Type (badge from PARTNER_TYPE_LABELS), Cooperation Type, Status (badge with PARTNER_STATUS_COLORS), Period (formatted date range), Actions
+  1063→- **Filters**: Search (name, contact, email, cooperationType), Type filter (from PARTNER_TYPE_OPTIONS), Status filter (from PARTNER_STATUS_OPTIONS)
+  1064→- **Form dialog**: name (required), partnerType (required, select from PARTNER_TYPE_OPTIONS), cooperationType, contactPerson, email, phone, startDate (date input), endDate (date input), status (required, select from PARTNER_STATUS_OPTIONS), logoUrl, address (textarea), documentUrl
+  1065→- **Status badges**: Aktif=green, Tidak Aktif=gray, Kedaluwarsa=red
+  1066→- **Slug generation**: Auto-generates unique slug from name using `generateSlug()` helper
+  1067→- **Validation**: Uses `partnerSchema` from `@/lib/validations`
+  1068→
+  1069→### 5. Admin Agenda (`/admin/agenda`)
+  1070→
+  1071→**DataTable** with full CRUD:
+  1072→- **Table columns**: Title, Event Type (badge from AGENDA_EVENT_TYPE_LABELS), Start Date, End Date, Location, Status (badge with AGENDA_STATUS_COLORS), Actions
+  1073→- **Filters**: Search (title, location, organizer), Event Type filter (from AGENDA_EVENT_TYPE_OPTIONS), Status filter (from AGENDA_STATUS_OPTIONS)
+  1074→- **Form dialog**: title (required), description (textarea), eventType (select from AGENDA_EVENT_TYPE_OPTIONS, with "__none__" for null), status (required, select from AGENDA_STATUS_OPTIONS), startDate (datetime-local, required), endDate (datetime-local), location, organizer, posterUrl
+  1075→- **Status badges**: Akan Datang=blue, Berlangsung=green, Selesai=gray, Dibatalkan=red
+  1076→- **Slug generation**: Auto-generates unique slug from title using `generateSlug()` helper
+  1077→- **Validation**: Uses `agendaSchema` from `@/lib/validations` (includes endDate >= startDate refinement)
+  1078→- **Ordered by**: startDate desc
+  1079→
+  1080→---
+  1081→
+  1082→### Technical Implementation (All Pages)
+  1083→
+  1084→- **Pattern**: Followed existing researchers page pattern exactly
+  1085→- **'use client'**: All pages are client components
+  1086→- **Data Fetching**: `useQuery` + `useMutation` from @tanstack/react-query
+  1087→- **Notifications**: sonner toast for success/error
+  1088→- **Forms**: react-hook-form + zodResolver with existing schemas from `@/lib/validations`
+  1089→- **UI Components**: shadcn/ui Dialog, AlertDialog, Card, Badge, Button, Input, Textarea, Select, Table, Skeleton, ScrollArea, Form, Switch, Separator
+  1090→- **Constants**: Imported from `@/lib/constants` for all status labels, options, and color maps
+  1091→- **Helpers**: `formatDate`, `formatDateTime`, `getStatusColor`, `generateSlug` from `@/lib/helpers`
+  1092→- **Pagination**: "Menampilkan X dari Y" + Sebelumnya/Selanjutnya buttons
+  1093→- **Loading**: Skeleton placeholders matching table row structure
+  1094→- **Empty states**: Module-specific icon + heading + suggestion text
+  1095→- **Animations**: Framer Motion stagger container with fade-up items
+  1096→- **Responsive**: Mobile-first with sm:/lg: breakpoints, overflow-x-auto on tables
+  1097→- **API pattern**: `{ params }: { params: Promise<{ id: string }> }` → `const { id } = await params`
+  1098→- **API error handling**: try/catch with console.error and JSON error responses
+  1099→- **API validation**: Zod safeParse with joined error messages on failure
+  1100→
+  1101→### Lint
+  1102→- 0 errors, 13 warnings (all pre-existing react-hooks/incompatible-library warnings)
+  1103→- No new issues introduced
+  1104→
+  1105→---
+  1106→
+  1107→## Task 10-b: Admin CRUD Pages for Gallery, Messages, Users, Settings
+  1108→
+  1109→**Date:** 2026-06-12
+  1110→**Files Created:**
+  1111→
+  1112→### API Routes
+  1113→- `/home/z/my-project/src/app/api/admin/gallery/route.ts` — Gallery albums: GET (list with photo count), POST (create album)
+  1114→- `/home/z/my-project/src/app/api/admin/gallery/[id]/route.ts` — Gallery album: GET (with photos), PUT (update), DELETE (cascade)
+  1115→- `/home/z/my-project/src/app/api/admin/gallery/[id]/photos/route.ts` — Album photos: GET (list), POST (add photo)
+  1116→- `/home/z/my-project/src/app/api/admin/gallery/[id]/photos/[photoId]/route.ts` — Photo: PUT (update caption), DELETE
+  1117→- `/home/z/my-project/src/app/api/admin/messages/route.ts` — Messages: GET (list with pagination, isRead filter, unreadCount)
+  1118→- `/home/z/my-project/src/app/api/admin/messages/[id]/route.ts` — Message: GET, PUT (mark as read), DELETE
+  1119→- `/home/z/my-project/src/app/api/admin/users/route.ts` — Users: GET (list), POST (create profile)
+  1120→- `/home/z/my-project/src/app/api/admin/users/[id]/route.ts` — User: GET, PUT (update), DELETE
+  1121→- `/home/z/my-project/src/app/api/admin/settings/route.ts` — Settings: GET (first record or null), PUT (upsert pattern)
+  1122→
+  1123→### Admin Pages
+  1124→- `/home/z/my-project/src/app/admin/gallery/page.tsx` — Gallery admin page
+  1125→- `/home/z/my-project/src/app/admin/messages/page.tsx` — Contact messages admin page
+  1126→- `/home/z/my-project/src/app/admin/users/page.tsx` — User management admin page
+  1127→- `/home/z/my-project/src/app/admin/settings/page.tsx` — Site settings admin page
+  1128→
+  1129→**Files Modified:**
+  1130→- `/home/z/my-project/src/lib/validations.ts` — Added `galleryCategoryEnum`, `galleryAlbumSchema`, `GalleryAlbumInput`, `galleryPhotoSchema`, `GalleryPhotoInput`
+  1131→
+  1132→### 1. Gallery API Routes
+  1133→
+  1134→**GET /api/admin/gallery**: List albums with photo count using `_count` include, supports search and category filter, paginated.
+  1135→**POST /api/admin/gallery**: Create album with auto-generated slug from title, validates with `galleryAlbumSchema`.
+  1136→**GET /api/admin/gallery/[id]**: Get album with all photos ordered by createdAt desc.
+  1137→**PUT /api/admin/gallery/[id]**: Update album, handles slug conflict resolution.
+  1138→**DELETE /api/admin/gallery/[id]**: Delete album (cascade deletes photos via Prisma `onDelete: Cascade`).
+  1139→**GET /api/admin/gallery/[id]/photos**: List photos in album.
+  1140→**POST /api/admin/gallery/[id]/photos**: Add photo to album (imageUrl, caption).
+  1141→**PUT /api/admin/gallery/[id]/photos/[photoId]**: Update photo (imageUrl, caption).
+  1142→**DELETE /api/admin/gallery/[id]/photos/[photoId]**: Delete photo.
+  1143→
+  1144→### 2. Contact Messages API Routes
+  1145→
+  1146→**GET /api/admin/messages**: List all contact messages with pagination, supports `isRead` filter and search, includes `unreadCount` in response.
+  1147→**No POST** — messages are created from the public contact form.
+  1148→**GET /api/admin/messages/[id]**: Get message detail.
+  1149→**PUT /api/admin/messages/[id]**: Update message (mark as read: `{ isRead: true }`).
+  1150→**DELETE /api/admin/messages/[id]**: Delete message.
+  1151→
+  1152→### 3. Users API Routes
+  1153→
+  1154→**GET /api/admin/users**: List all profiles with pagination, search, and role filter.
+  1155→**POST /api/admin/users**: Create new profile with email uniqueness check.
+  1156→**GET /api/admin/users/[id]**: Get profile detail.
+  1157→**PUT /api/admin/users/[id]**: Update profile with email conflict detection.
+  1158→**DELETE /api/admin/users/[id]**: Delete profile.
+  1159→
+  1160→### 4. Settings API Route
+  1161→
+  1162→**GET /api/admin/settings**: Get first SiteSetting record, returns `{ data: null }` if none exists.
+  1163→**PUT /api/admin/settings**: Upsert pattern — updates existing record or creates new one if none exists.
+  1164→
+  1165→### 5. Admin Gallery Page
+  1166→
+  1167→DataTable of albums with columns: Title, Category, Photo Count, Cover, Actions.
+  1168→- **Add/Edit album dialog**: title, description, coverUrl, category (select from GALLERY_CATEGORY_OPTIONS)
+  1169→- **View album button** → opens a Dialog showing photos in a responsive grid (2/3/4 cols)
+  1170→- **Add photo form** inside the photo dialog: imageUrl, caption inputs
+  1171→- **Delete photo button** on each photo (hover-revealed X button)
+  1172→- **Delete album** with confirmation (warns about cascade photo deletion)
+  1173→- Search, pagination, loading skeleton states
+  1174→- Follows same pattern as existing admin pages (useQuery + useMutation, sonner toast, react-hook-form + zodResolver)
+  1175→
+  1176→### 6. Admin Messages Page
+  1177→
+  1178→DataTable: Name, Email, Subject, Date, Read/Unread badge, Actions.
+  1179→- **Filter**: read/unread/all via Select dropdown
+  1180→- **Click to view** message detail in a Dialog (shows name, email, phone, date, subject, message body)
+  1181→- **Auto mark as read** when opening a message
+  1182→- **Mark as read button** in table and dialog
+  1183→- **Unread count** shown in header with Badge
+  1184→- **Delete** with confirmation AlertDialog
+  1185→- Unread messages have highlighted row background (`bg-muted/40`)
+  1186→- Responsive layout with hidden columns on mobile
+  1187→
+  1188→### 7. Admin Users Page
+  1189→
+  1190→DataTable: Name (with avatar), Email, Role (colored badge), Active status, Created date, Actions.
+  1191→- **Form dialog**: fullName, email, role (select from USER_ROLE_OPTIONS), avatarUrl, isActive (Switch toggle)
+  1192→- **Role badges** with distinct colors per role:
+  1193→  - super_admin: red
+  1194→  - admin_lppm: emerald
+  1195→  - editor: sky blue
+  1196→  - reviewer: amber
+  1197→- **Cannot delete self** — delete button hidden for current user
+  1198→- **Email uniqueness** validated on both create and update
+  1199→- Search, pagination, loading states
+  1200→
+  1201→### 8. Admin Settings Page
+  1202→
+  1203→NOT a DataTable — a form page for editing site settings, organized in Tabs:
+  1204→- **Tab "Umum"**: siteName, lppmName, email, phone, whatsapp, address
+  1205→- **Tab "Media"**: logoUrl, lppmLogoUrl, faviconUrl, googleMapsUrl — with logo preview section
+  1206→- **Tab "Sosial Media"**: facebookUrl, instagramUrl, youtubeUrl
+  1207→- **Tab "SEO"**: seoTitle, seoDescription — with Google search result preview
+  1208→- Single "Simpan Pengaturan" save button using PUT upsert pattern
+  1209→- Form synced with fetched data via separate useQuery
+  1210→- Loading skeleton while data is being fetched
+  1211→- Tabs use shadcn/ui Tabs component with icons
+  1212→
+  1213→### Design Decisions
+  1214→
+  1215→- **Consistent pattern**: All admin pages follow the same pattern established by existing pages (announcements, etc.)
+  1216→- **Dynamic route params**: Using `{ params }: { params: Promise<{ id: string }> }` → `const { id } = await params` as required by Next.js 16
+  1217→- **Gallery route structure**: Used `[id]` consistently for album routes (not `[albumId]`) to avoid Next.js slug name conflict
+  1218→- **Settings upsert**: PUT creates if no record exists, updates if one does
+  1219→- **Messages auto-read**: Automatically marks message as read when opened in dialog
+  1220→- **User self-protection**: Delete button hidden for current user (placeholder logic for auth integration)
+  1221→- **Role badge colors**: Each role gets a distinct color for quick visual identification
+  1222→
+  1223→### Lint & Testing
+  1224→
+  1225→- ESLint passes with 0 errors, 13 warnings (all are `react-hooks/incompatible-library` warnings from `form.watch()` — same as existing pages)
+  1226→- All 4 new API endpoint groups tested and returning correct responses
+  1227→- All 4 admin pages compile successfully
+  1228→
+  1229→## Task 2-a: Create Detail API Routes for Public Pages
+  1230→
+  1231→**Date:** 2026-03-05
+  1232→**Files Created:**
+  1233→- `/home/z/my-project/src/app/api/research/[slug]/route.ts` — GET single research detail
+  1234→- `/home/z/my-project/src/app/api/community-service/[slug]/route.ts` — GET single community service detail
+  1235→- `/home/z/my-project/src/app/api/publication/[slug]/route.ts` — GET single publication detail
+  1236→- `/home/z/my-project/src/app/api/news/[slug]/route.ts` — GET single news article detail
+  1237→- `/home/z/my-project/src/app/api/announcement/[slug]/route.ts` — GET single announcement detail
+  1238→- `/home/z/my-project/src/app/api/funding-scheme/[slug]/route.ts` — GET single funding scheme detail
+  1239→
+  1240→### 1. Research Detail (`/api/research/[slug]`)
+  1241→- Fetches research by slug with full relations:
+  1242→  - leader: select id, name, nidn, photoUrl, expertise, email
+  1243→  - fundingScheme: select id, name, slug, source, year
+  1244→  - faculty: select id, name, slug
+  1245→  - studyProgram: select id, name, slug
+  1246→  - members: include researcher (select id, name, nidn, photoUrl)
+  1247→  - studentMembers: all fields
+  1248→  - publications: select id, title, slug, publicationType, year
+  1249→- Returns 404 if not found or isPublished is false
+  1250→
+  1251→### 2. Community Service Detail (`/api/community-service/[slug]`)
+  1252→- Fetches community service by slug with full relations:
+  1253→  - leader: select id, name, nidn, photoUrl, expertise, email
+  1254→  - fundingScheme: select id, name, slug, source, year
+  1255→  - faculty: select id, name, slug
+  1256→  - studyProgram: select id, name, slug
+  1257→  - members: include researcher (select id, name, nidn, photoUrl)
+  1258→  - studentMembers: all fields
+  1259→  - publications: select id, title, slug, publicationType, year
+  1260→- Returns 404 if not found or isPublished is false
+  1261→
+  1262→### 3. Publication Detail (`/api/publication/[slug]`)
+  1263→- Fetches publication by slug with:
+  1264→  - research: select id, title, slug, year
+  1265→  - service: select id, title, slug, year
+  1266→  - publicationAuthors: include researcher (select id, name, nidn, photoUrl)
+  1267→- Returns 404 if not found or isPublished is false
+  1268→
+  1269→### 4. News Detail (`/api/news/[slug]`)
+  1270→- Fetches news by slug with:
+  1271→  - category: select id, name, slug
+  1272→- Returns 404 if not found or status is not 'published'
+  1273→
+  1274→### 5. Announcement Detail (`/api/announcement/[slug]`)
+  1275→- Fetches announcement by slug (no relations)
+  1276→- Returns 404 if not found or status is not 'active'
+  1277→
+  1278→### 6. Funding Scheme Detail (`/api/funding-scheme/[slug]`)
+  1279→- Fetches funding scheme by slug with filtered relations:
+  1280→  - researches: where isPublished=true, select id, title, slug, year, status, leader (select id, name)
+  1281→  - communityServices: where isPublished=true, select id, title, slug, year, status, leader (select id, name)
+  1282→- Returns 404 if not found (no isPublished check on funding scheme itself)
+  1283→
+  1284→### Design Patterns
+  1285→- All endpoints follow the same structure: try/catch with console.error logging
+  1286→- Dynamic route params use `{ params }: { params: Promise<{ slug: string }> }` with `await params`
+  1287→- Responses wrapped in `{ data: item }` on success
+  1288→- Error responses: `{ error: 'Not found' }` (404) or `{ error: 'Failed to fetch data' }` (500)
+  1289→- Console error tags: `[API_RESEARCH_GET]`, `[API_COMMUNITY_SERVICE_GET]`, `[API_PUBLICATION_GET]`, `[API_NEWS_GET]`, `[API_ANNOUNCEMENT_GET]`, `[API_FUNDING_SCHEME_GET]`
+  1290→
+  1291→### Lint & Testing
+  1292→- ESLint passes with 0 errors (13 pre-existing warnings only)
+  1293→- No new lint issues introduced
+  1294→
+  1295→---
+  1296→
+  1297→## Task 3: Admin Document Categories Page, Error Boundary, and Loading Boundary
+  1298→
+  1299→**Date:** 2026-03-05
+  1300→**Task ID:** 3
+  1301→
+  1302→**Files Created:**
+  1303→- `/home/z/my-project/src/app/api/admin/document-categories/route.ts` — GET list + POST create
+  1304→- `/home/z/my-project/src/app/api/admin/document-categories/[id]/route.ts` — GET, PUT, DELETE
+  1305→- `/home/z/my-project/src/app/admin/document-categories/page.tsx` — CRUD admin page
+  1306→- `/home/z/my-project/src/app/admin/error.tsx` — Admin error boundary
+  1307→- `/home/z/my-project/src/app/admin/loading.tsx` — Admin loading boundary
+  1308→
+  1309→**Files Modified:**
+  1310→- `/home/z/my-project/src/app/admin/layout.tsx` — Added "Kategori Dokumen" nav item + FolderOpen icon import
+  1311→
+  1312→### 1. Document Categories API — List & Create (`/api/admin/document-categories/route.ts`)
+  1313→
+  1314→- **GET**: Paginated list of document categories with search filter
+  1315→  - Query params: `page`, `pageSize`, `search`
+  1316→  - Includes `_count.documents` for document count per category
+  1317→  - Ordered by `createdAt` desc
+  1318→  - Returns `{ data, total, page, pageSize, totalPages }`
+  1319→- **POST**: Create new document category
+  1320→  - Body: `{ name: string }`
+  1321→  - Auto-generates slug via `generateSlug()`
+  1322→  - Checks slug uniqueness (409 conflict if exists)
+  1323→  - Returns `{ data: category }` with 201 status
+  1324→
+  1325→### 2. Document Categories API — Individual Item (`/api/admin/document-categories/[id]/route.ts`)
+  1326→
+  1327→- **GET**: Get single document category by ID with document count
+  1328→  - Returns 404 if not found
+  1329→- **PUT**: Update document category by ID
+  1330→  - Body: `{ name: string }`
+  1331→  - Auto-regenerates slug
+  1332→  - Checks slug uniqueness excluding self
+  1333→  - Returns 404 if not found
+  1334→- **DELETE**: Delete document category by ID
+  1335→  - Prevents deletion if category has associated documents (returns 400 with error message)
+  1336→  - Returns 404 if not found
+  1337→  - Returns `{ data: { id } }` on success
+  1338→
+  1339→### 3. Admin Document Categories Page (`/admin/document-categories`)
+  1340→
+  1341→Same CRUD pattern as the existing news-categories admin page:
+  1342→- **Header**: FolderOpen icon, "Kategori Dokumen" title, "Kelola kategori dokumen unduhan" subtitle
+  1343→- **Search input**: Filters by name, resets page to 1
+  1344→- **Table columns**: Name, Slug (code badge), Jumlah Dokumen (Badge), Aksi (Edit/Delete buttons)
+  1345→- **Add/Edit Dialog**: Name field with Zod validation (min 1 char), auto-slug generation
+  1346→- **Delete Confirmation**: AlertDialog with destructive action button
+  1347→- **Pagination**: Sebelumnya/Selanjutnya buttons with page/totalPages display
+  1348→- **Loading state**: 5-row skeleton
+  1349→- **Empty state**: FolderOpen icon with "Belum ada data kategori dokumen" message
+  1350→- **TanStack React Query**: `useQuery` for data fetching, `useMutation` for create/update/delete
+  1351→- **sonner**: Toast notifications for success/error on all mutations
+  1352→- **Framer Motion**: Stagger container animation
+  1353→
+  1354→### 4. Admin Error Boundary (`/admin/error.tsx`)
+  1355→
+  1356→- `'use client'` component
+  1357→- Logs error to console via `useEffect`
+  1358→- Displays: destructive-colored AlertCircle icon, "Terjadi Kesalahan" heading, error message, "Coba Lagi" button with RotateCcw icon
+  1359→- Uses shadcn/ui Button with outline variant
+  1360→- Centered layout with `min-h-[400px]`
+  1361→
+  1362→### 5. Admin Loading Boundary (`/admin/loading.tsx`)
+  1363→
+  1364→- Server component (no `'use client'` needed)
+  1365→- Displays: animated spinning Loader2 icon with primary color, "Memuat data..." text
+  1366→- Centered layout with `min-h-[400px]`
+  1367→
+  1368→### 6. Admin Sidebar Update
+  1369→
+  1370→Added to `/admin/layout.tsx`:
+  1371→- Imported `FolderOpen` from lucide-react
+  1372→- Added nav item: `{ label: 'Kategori Dokumen', icon: FolderOpen, href: '/admin/document-categories' }`
+  1373→- Positioned after "Dokumen Unduhan" (item 12), before "Reviewer" (now item 14)
+  1374→- Total nav items: 21 (was 20)
+  1375→
+  1376→### Lint & Testing
+  1377→- ESLint: 0 errors, 13 pre-existing warnings (no new issues introduced)
+  1378→- API endpoint responds correctly (returns "Unauthorized" due to auth middleware, as expected)
+  1379→- All files compile successfully
+  1380→
+  1381→---
+  1382→
+  1383→## Task 2: Refactor useAuth Hook and Add RBAC Permission System
+  1384→
+  1385→**Date:** 2026-03-05
+  1386→**Files Created:**
+  1387→- `/home/z/my-project/src/lib/permissions.ts` — Complete RBAC permission system (was a simpler route-only version, now enhanced with full Permission type system)
+  1388→
+  1389→**Files Modified:**
+  1390→- `/home/z/my-project/src/hooks/useAuth.ts` — Refactored with hasPermission, canAccess helpers and useSyncExternalStore
+  1391→- `/home/z/my-project/src/middleware.ts` — Added role-based API and page route protection
+  1392→- `/home/z/my-project/src/app/api/auth/login/route.ts` — Added lppm_role cookie
+  1393→- `/home/z/my-project/src/app/api/auth/logout/route.ts` — Clear lppm_role cookie on logout
+  1394→
+  1395→### 1. permissions.ts — Complete RBAC System
+  1396→
+  1397→Created comprehensive permission system with two complementary approaches:
+  1398→
+  1399→#### Permission-Based System (fine-grained)
+  1400→- **Permission type**: 24 permission strings covering `dashboard:view`, resource `:manage`/`:view` pairs, and singleton permissions (`messages:view`, `users:manage`, `settings:manage`, `profil:manage`, `news-categories:manage`, `document-categories:manage`)
+  1401→- **ROLE_PERMISSIONS map**: Full mapping of each role to its allowed permissions
+  1402→  - `super_admin`: All 24 permissions
+  1403→  - `admin_lppm`: 22 permissions (excludes `users:manage`, `settings:manage`, `profil:manage`)
+  1404→  - `editor`: 18 permissions (manage: news, announcements, documents, agenda, gallery, news-categories, document-categories; view-only: research, community-service, publication, funding, partners, messages, reviews)
+  1405→  - `reviewer`: 5 permissions (dashboard:view, reviews:manage/view, research:view, community-service:view)
+  1406→- **Helper functions**: `hasPermission(role, permission)`, `canManage(role, resource)`, `canView(role, resource)`
+  1407→
+  1408→#### Route-Based System (sidebar/UI control)
+  1409→- **RouteAccess interface**: `{ path: string, viewOnly?: boolean }` — viewOnly marks read-only routes
+  1410→- **ROLE_ROUTES map**: Per-role accessible admin routes with viewOnly flags
+  1411→  - `super_admin`: All 21 routes, full access
+  1412→  - `admin_lppm`: 19 routes (no /admin/users, /admin/settings), profil is viewOnly
+  1413→  - `editor`: 14 routes (news, announcements, documents, document-categories, agenda, gallery + view-only for research, community-service, publications, funding, partners, messages, reviews)
+  1414→  - `reviewer`: 4 routes (dashboard, reviews, research view-only, community-service view-only)
+  1415→- **Helper functions**: `canAccessRoute(role, route)`, `getAccessibleRoutes(role)`, `getAccessibleRoutePaths(role)`, `isRouteViewOnly(role, route)`, `canWriteRoute(role, route)`
+  1416→
+  1417→### 2. useAuth.ts — Refactored with Permission Helpers
+  1418→
+  1419→Refactored the useAuth hook to include RBAC helpers:
+  1420→- **Imports**: Added `Permission` type and `hasPermission`/`canAccessRoute` from `@/lib/permissions`
+  1421→- **AuthUser interface**: Changed `role` type from `string` to `UserRole`
+  1422→- **useSyncExternalStore**: Replaced `useState`+`useEffect` pattern with `useSyncExternalStore` to avoid the React Compiler lint error (`react-hooks/set-state-in-effect`)
+  1423→- **hasPermission callback**: `hasPermission(permission: Permission) => boolean` — checks if current user has a specific permission
+  1424→- **canAccess callback**: `canAccess(route: string) => boolean` — checks if current user can access a specific admin route
+  1425→- **logout**: Now clears both `lppm_auth` and `lppm_role` cookies
+  1426→- **Return value**: `{ user, loading, login, logout, isAuthenticated, hasPermission, canAccess }`
+  1427→
+  1428→### 3. middleware.ts — Role-Based Route Protection
+  1429→
+  1430→Enhanced middleware with role-based access control:
+  1431→- **lppm_role cookie**: Reads the new `lppm_role` cookie for role checking
+  1432→- **Admin page protection**:
+  1433→  - `/admin/users` and `/admin/settings`: Only `super_admin` (redirects to `/admin` for others)
+  1434→  - `/admin/researchers`, `/admin/faculties`, `/admin/study-programs`, `/admin/reviewers`: Only `super_admin` and `admin_lppm`
+  1435→  - Other `/admin/*` routes: All authenticated users
+  1436→- **Admin API protection**:
+  1437→  - `/api/admin/users/*` and `/api/admin/settings/*`: Only `super_admin` (returns 403 Forbidden for others)
+  1438→  - `/api/admin/researchers/*`, `/api/admin/faculties/*`, `/api/admin/study-programs/*`, `/api/admin/reviewers/*`: Only `super_admin` and `admin_lppm` (returns 403)
+  1439→  - Other `/api/admin/*` routes: All authenticated users (client-side handles further restrictions)
+  1440→
+  1441→### 4. Login API — lppm_role Cookie
+  1442→
+  1443→Updated `/api/auth/login/route.ts`:
+  1444→- Added `lppm_role` cookie with the user's role value on successful login
+  1445→- Same cookie settings as `lppm_auth`: `path=/`, `httpOnly=false`, `sameSite=lax`, 7-day expiry
+  1446→- This allows the middleware to check the role without database queries
+  1447→
+  1448→### 5. Logout API — Clear lppm_role Cookie
+  1449→
+  1450→Updated `/api/auth/logout/route.ts`:
+  1451→- Now clears both `lppm_auth` and `lppm_role` cookies on logout
+  1452→
+  1453→### Admin Layout — Already Uses Permission System
+  1454→
+  1455→The admin layout (`/admin/layout.tsx`) was already updated by a previous agent to:
+  1456→- Filter sidebar navigation items based on user role using `getAccessibleRoutes()`
+  1457→- Show "Lihat" (view-only) badges on read-only sidebar items using `isRouteViewOnly()`
+  1458→- Use `useMemo` for filtered nav items and page title based on role
+  1459→
+  1460→### Lint & Testing
+  1461→- ESLint: 0 errors, 13 warnings (all pre-existing `react-hooks/incompatible-library` from react-hook-form)
+  1462→- Fixed the previous `react-hooks/set-state-in-effect` error in useAuth.ts by switching to `useSyncExternalStore`
+  1463→- Dev server compiles successfully
+  1464→
+  1465→## Task 3 (Optimize): Admin Layout Role-Based Sidebar + Dashboard Performance
+  1466→
+  1467→**Date:** 2026-03-05
+  1468→**Files Created:**
+  1469→- `/home/z/my-project/src/lib/permissions.ts` — Role-based route access permissions module
+  1470→- `/home/z/my-project/src/app/admin/loading.tsx` — Skeleton loader for admin pages
+  1471→- `/home/z/my-project/src/app/admin/error.tsx` — Error boundary with retry button
+  1472→
+  1473→**Files Modified:**
+  1474→- `/home/z/my-project/src/app/admin/layout.tsx` — Refactored with role-based sidebar, memoization, view-only badges
+  1475→- `/home/z/my-project/src/app/admin/page.tsx` — Optimized with lazy-loaded charts, memoized stat cards, error boundaries, staleTime
+  1476→
+  1477→### 1. Permissions Module (`/src/lib/permissions.ts`)
+  1478→
+  1479→Centralized role-based route access control:
+  1480→- **`getAccessibleRoutes(role)`**: Returns array of `{ path, viewOnly }` for a given role
+  1481→- **`getAccessibleRoutePaths(role)`**: Returns just the path strings
+  1482→- **`canAccessRoute(role, routePath)`**: Boolean check if user can access a route
+  1483→- **`isRouteViewOnly(role, routePath)`**: Returns true if route is view-only for that role
+  1484→- **`canWriteRoute(role, routePath)`**: Returns true if route is accessible AND not view-only
+  1485→
+  1486→Role visibility definitions:
+  1487→- **super_admin**: ALL 21 routes, full access
+  1488→- **admin_lppm**: All EXCEPT `/admin/users` and `/admin/settings`
+  1489→- **editor**: Dashboard, Berita, Pengumuman, Dokumen, Kategori Dokumen, Agenda, Galeri, Pesan Kontak (full access) + Penelitian, Pengabdian, Publikasi, Hibah, Kerja Sama (view-only)
+  1490→- **reviewer**: Dashboard + Review Proposal only
+  1491→
+  1492→### 2. Admin Layout Refactor (`/admin/layout.tsx`)
+  1493→
+  1494→Major refactoring for role-based sidebar:
+  1495→- **Role-based nav filtering**: `getNavItemsForRole(role)` uses `getAccessibleRoutes()` from permissions module to filter NAV_ITEMS based on user role
+  1496→- **FilteredNavItem type**: Extends NavItem with `viewOnly: boolean` flag
+  1497→- **"Lihat" badge for view-only items**: View-only sidebar items show a subtle `Badge` with `Eye` icon and "Lihat" text, plus dimmed styling (60% opacity text, 40% opacity icons)
+  1498→- **Removed duplicate useAuth**: Previously `SidebarContent` called `useAuth()` separately for logout — now logout is passed as `onLogout` prop from parent, avoiding duplicate hook instance
+  1499→- **useMemo for sidebar items**: `filteredNavItems` memoized based on `user.role` to prevent recalculation on re-renders
+  1500→- **useMemo for page title**: `currentPageTitle` memoized based on `filteredNavItems` and `pathname`
+  1501→- **useCallback for handleLogout**: Logout handler has stable reference via `useCallback`
+  1502→- **Smooth sidebar filtering**: No flicker — filtered items are computed before render
+  1503→
+  1504→### 3. Dashboard Page Optimization (`/admin/page.tsx`)
+  1505→
+  1506→Performance improvements:
+  1507→- **React.lazy() for chart components**: 4 lazy-loaded chart components (`LazyResearchChart`, `LazyServiceChart`, `LazyPublicationChart`, `LazyFundingChart`) using dynamic `import('recharts')` for code splitting
+  1508→- **Suspense boundaries**: Each chart wrapped in `<Suspense fallback={<ChartSkeleton />}>` for loading state
+  1509→- **Error boundaries for charts**: `ChartErrorBoundary` component wraps each chart section — one failed chart doesn't break the whole page, shows retry button
+  1510→- **Class-based ErrorBoundaryWrapper**: Used inside `ChartErrorBoundary` for proper React error catching
+  1511→- **Memoized StatCard**: `React.memo` wraps stat card component to prevent unnecessary re-renders
+  1512→- **Query optimization**: `staleTime: 60000` (60 seconds) and `refetchOnWindowFocus: false` on the stats query to prevent excessive refetching
+  1513→- **STAT_CARDS constant**: Moved outside component to prevent recreation
+  1514→
+  1515→### 4. Admin Loading Page (`/admin/loading.tsx`)
+  1516→
+  1517→Skeleton loader matching the dashboard layout:
+  1518→- Page heading skeleton
+  1519→- 6 stat card skeletons in responsive grid
+  1520→- 4 chart card skeletons (2+2 grid)
+  1521→- Recent activity list skeleton
+  1522→- Uses `animate-in fade-in` for smooth appearance
+  1523→
+  1524→### 5. Admin Error Page (`/admin/error.tsx`)
+  1525→
+  1526→Error boundary page with:
+  1527→- Error icon with destructive color
+  1528→- Error message display with digest ID
+  1529→- "Coba Lagi" (retry) button calling `reset()`
+  1530→- "Kembali ke Dashboard" button linking to `/admin`
+  1531→- Clean centered layout
+  1532→
+  1533→### Lint & Testing
+  1534→- ESLint: 0 errors, 13 pre-existing warnings (react-hooks/incompatible-library from react-hook-form)
+  1535→- Admin page returns 307 (redirect to login) when unauthenticated — correct behavior
+  1536→- Login API returns 200 with valid credentials
+  1537→- Admin page returns 200 with valid auth cookies
+  1538→- Dev server compiles successfully
+  1539→
+  1540→---
+  1541→
+  1542→## Task 5: Verify and Fix All CRUD API Routes for Every Prisma Model
+  1543→
+  1544→**Date:** 2026-03-05
+  1545→**Files Modified:**
+  1546→- `/home/z/my-project/src/app/api/admin/partners/[id]/route.ts` — Added slug regeneration on PUT
+  1547→- `/home/z/my-project/src/app/api/admin/partners/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+  1548→- `/home/z/my-project/src/app/api/admin/faculties/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+  1549→- `/home/z/my-project/src/app/api/admin/study-programs/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+  1550→- `/home/z/my-project/src/app/api/admin/researchers/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+  1551→- `/home/z/my-project/src/app/api/admin/research/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+  1552→- `/home/z/my-project/src/app/api/admin/community-service/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+  1553→- `/home/z/my-project/src/app/api/admin/news-categories/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+  1554→- `/home/z/my-project/src/app/api/admin/document-categories/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+  1555→- `/home/z/my-project/src/app/api/admin/reviewers/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+  1556→- `/home/z/my-project/src/app/api/admin/reviews/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+  1557→- `/home/z/my-project/src/app/api/admin/agenda/route.ts` — Added DEFAULT_PAGE_SIZE import, consistent page/pageSize bounds
+  1558→- `/home/z/my-project/src/app/api/stats/route.ts` — Added 5 new dashboard count fields
+  1559→
+  1560→### 1. Complete API Route Inventory (All 26 Models)
+  1561→
+  1562→Every Prisma model now has a complete set of CRUD admin API routes:
+  1563→
+  1564→| # | Model | Admin Route | GET list | POST create | GET [id] | PUT update | DELETE | Status |
+  1565→|---|-------|-------------|----------|-------------|----------|------------|--------|--------|
+  1566→| 1 | Profile | /api/admin/users | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+  1567→| 2 | SiteSetting | /api/admin/settings | ✅ | N/A (singleton) | N/A | ✅ (upsert) | N/A | Complete |
+  1568→| 3 | LppmProfile | /api/admin/lppm-profile | ✅ | N/A (singleton) | N/A | ✅ (upsert) | N/A | Complete |
+  1569→| 4 | Faculty | /api/admin/faculties | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+  1570→| 5 | StudyProgram | /api/admin/study-programs | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+  1571→| 6 | Researcher | /api/admin/researchers | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+  1572→| 7 | FundingScheme | /api/admin/funding | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+  1573→| 8 | Research | /api/admin/research | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+  1574→| 9 | ResearchMember | (within Research) | — | — | — | — | — | Managed via Research |
+  1575→| 10 | ResearchStudentMember | (within Research) | — | — | — | — | — | Managed via Research |
+  1576→| 11 | CommunityService | /api/admin/community-service | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+  1577→| 12 | CommunityServiceMember | (within CommunityService) | — | — | — | — | — | Managed via CS |
+  1578→| 13 | CommunityServiceStudentMember | (within CommunityService) | — | — | — | — | — | Managed via CS |
+  1579→| 14 | Publication | /api/admin/publications | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+  1580→| 15 | PublicationAuthor | (within Publication) | — | — | — | — | — | Managed via Publication |
+  1581→| 16 | NewsCategory | /api/admin/news-categories | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+  1582→| 17 | News | /api/admin/news | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+  1583→| 18 | Announcement | /api/admin/announcements | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+  1584→| 19 | DocumentCategory | /api/admin/document-categories | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+  1585→| 20 | Document | /api/admin/documents | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+  1586→| 21 | Reviewer | /api/admin/reviewers | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+  1587→| 22 | ProposalReview | /api/admin/reviews | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+  1588→| 23 | Partner | /api/admin/partners | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+  1589→| 24 | Agenda | /api/admin/agenda | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+  1590→| 25 | GalleryAlbum | /api/admin/gallery | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+  1591→| 25b | GalleryPhoto | /api/admin/gallery/[id]/photos | ✅ | ✅ | — | ✅ (by photoId) | ✅ (by photoId) | Complete |
+  1592→| 26 | ContactMessage | /api/admin/messages | ✅ | N/A (public POST) | ✅ | ✅ (mark read) | ✅ | Complete |
+  1593→| 27 | ActivityLog | No admin CRUD | — | — | — | — | — | System-generated |
+  1594→
+  1595→### 2. Auth Cookies (Already Implemented)
+  1596→
+  1597→- **Login route** (`/api/auth/login`): Already sets both `lppm_auth` (user ID) and `lppm_role` (user role) cookies ✅
+  1598→- **Logout route** (`/api/auth/logout`): Already clears both `lppm_auth` and `lppm_role` cookies ✅
+  1599→
+  1600→### 3. Partner PUT Route Bug Fix
+  1601→
+  1602→**Problem**: The partner PUT route did NOT regenerate the slug when the name was changed. This meant:
+  1603→- If a partner name was updated, the slug would remain the old value
+  1604→- No slug uniqueness check was performed on update
+  1605→- This was inconsistent with all other routes (faculties, study-programs, research, community-service, etc.) that do regenerate slugs on PUT
+  1606→
+  1607→**Fix**: Added `generateSlug` import and slug regeneration logic to `/api/admin/partners/[id]/route.ts`:
+  1608→- Import `generateSlug` from `@/lib/helpers`
+  1609→- Generate new slug from the updated name
+  1610→- Check for slug uniqueness (excluding self) with `findFirst({ where: { slug, id: { not: id } } })`
+  1611→- Return 409 conflict if another partner already has that slug
+  1612→- Include `slug` in the `update` data object
+  1613→
+  1614→### 4. Stats API Enhancement
+  1615→
+  1616→Added 5 new dashboard count fields to `/api/stats/route.ts`:
+  1617→
+  1618→| Field | Description | Query |
+  1619→|-------|-------------|-------|
+  1620→| `totalNews` | Total published news | `db.news.count({ where: { status: 'published' } })` |
+  1621→| `totalAnnouncement` | Total active announcements | `db.announcement.count({ where: { status: 'active' } })` |
+  1622→| `totalDocument` | Total active documents | `db.document.count({ where: { isActive: true } })` |
+  1623→| `unreadMessages` | Unread contact messages | `db.contactMessage.count({ where: { isRead: false } })` |
+  1624→| `pendingReviews` | Reviews awaiting review | `db.proposalReview.count({ where: { status: 'waiting' } })` |
+  1625→
+  1626→All 5 new queries are included in the same `Promise.all` call for optimal parallel execution.
+  1627→
+  1628→### 5. Consistency Fix: page/pageSize Bounds
+  1629→
+  1630→**Problem**: 11 admin routes used bare `parseInt()` for page/pageSize without bounds checking or `DEFAULT_PAGE_SIZE`, while 8 routes properly used `Math.max(1, parseInt(...))` and `Math.min(100, Math.max(1, parseInt(...)))` with `DEFAULT_PAGE_SIZE`.
+  1631→
+  1632→**Fixed routes** (11 files):
+  1633→1. `/api/admin/faculties/route.ts`
+  1634→2. `/api/admin/study-programs/route.ts`
+  1635→3. `/api/admin/researchers/route.ts`
+  1636→4. `/api/admin/research/route.ts`
+  1637→5. `/api/admin/community-service/route.ts`
+  1638→6. `/api/admin/news-categories/route.ts`
+  1639→7. `/api/admin/document-categories/route.ts`
+  1640→8. `/api/admin/reviewers/route.ts`
+  1641→9. `/api/admin/reviews/route.ts`
+  1642→10. `/api/admin/agenda/route.ts`
+  1643→11. `/api/admin/partners/route.ts`
+  1644→
+  1645→**Changes per file**:
+  1646→- Added `import { DEFAULT_PAGE_SIZE } from '@/lib/constants'`
+  1647→- Changed `page` from `parseInt(searchParams.get('page') || '1')` to `Math.max(1, parseInt(searchParams.get('page') || '1'))`
+  1648→- Changed `pageSize` from `parseInt(searchParams.get('pageSize') || '10')` to `Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE))))`
+  1649→
+  1650→Now all 19 paginated admin routes use the same consistent pattern for page/pageSize parsing and validation.
+  1651→
+  1652→### 6. Lint & Testing
+  1653→
+  1654→- ESLint: 0 errors, 13 pre-existing warnings (React Hook Form `watch()` compatibility)
+  1655→- `/api/stats` returns all 16 fields including the 5 new ones (verified via curl)
+  1656→- `/api/auth/login` sets both `lppm_auth` and `lppm_role` cookies (verified via curl -c)
+  1657→- All admin routes return proper paginated response format `{ data, total, page, pageSize, totalPages }`
+  1658→- Dev server compiles successfully
+  1659→
+  1660→---
+  1661→
+  1662→## Task 3-a: Rewrite API Routes from Prisma to Supabase
+  1663→
+  1664→**Date:** 2026-03-05
+  1665→**Agent:** API Migration Agent
+  1666→
+  1667→### Objective
+  1668→Rewrite 9 API route files to use Supabase instead of Prisma, while maintaining the same API response format (camelCase) for frontend compatibility.
+  1669→
+  1670→### Files Modified
+  1671→
+  1672→1. **`/src/app/api/auth/login/route.ts`**
+  1673→   - Replaced `db.profile.findUnique({ where: { email } })` with `supabase.from('profiles').select('*').eq('email', email).single()`
+  1674→   - Added `mapProfile()` helper to convert snake_case → camelCase in response
+  1675→
+  1676→2. **`/src/app/api/auth/logout/route.ts`**
+  1677→   - No DB usage — only clears cookies. Added comment noting no changes needed.
+  1678→
+  1679→3. **`/src/app/api/site-settings/route.ts`**
+  1680→   - Replaced `db.siteSetting.findFirst()` with `supabase.from('site_settings').select('*').limit(1).single()`
+  1681→   - Added `mapSiteSetting()` helper for camelCase response mapping
+  1682→
+  1683→4. **`/src/app/api/lppm-profile/route.ts`**
+  1684→   - Replaced `db.lppmProfile.findFirst()` with `supabase.from('lppm_profiles').select('*').limit(1).single()`
+  1685→   - Added `mapLppmProfile()` helper for camelCase response mapping
+  1686→
+  1687→5. **`/src/app/api/admin/settings/route.ts`**
+  1688→   - GET: Replaced `db.siteSetting.findFirst()` with Supabase query
+  1689→   - PUT: Implemented upsert pattern — check if record exists, then `update` or `insert`
+  1690→   - All insert/update data uses snake_case column names
+  1691→   - Maps response back to camelCase via `mapSiteSetting()`
+  1692→
+  1693→6. **`/src/app/api/admin/lppm-profile/route.ts`**
+  1694→   - GET: Replaced `db.lppmProfile.findFirst()` with Supabase query
+  1695→   - PUT: Implemented upsert pattern for lppm_profiles table
+  1696→   - Maps camelCase validation input to snake_case for Supabase insert/update
+  1697→   - Maps response back to camelCase via `mapLppmProfile()`
+  1698→
+  1699→7. **`/src/app/api/admin/users/route.ts`**
+  1700→   - GET: Replaced `db.profile.findMany()` with paginated Supabase query using `paginateQuery()` and `buildOrSearch()` helpers
+  1701→   - POST: Replaced `db.profile.create()` with `supabase.from('profiles').insert().select().single()`
+  1702→   - Email uniqueness check uses Supabase `.select('id').eq('email', ...).single()`
+  1703→   - All data uses snake_case for Supabase, maps back to camelCase in response
+  1704→
+  1705→8. **`/src/app/api/admin/users/[id]/route.ts`**
+  1706→   - GET: Replaced `db.profile.findUnique({ where: { id } })` with `supabase.from('profiles').select('*').eq('id', id).single()`
+  1707→   - PUT: Replaced `db.profile.update()` with Supabase update query; email uniqueness check also migrated
+  1708→   - DELETE: Replaced `db.profile.delete()` with `supabase.from('profiles').delete().eq('id', id)`
+  1709→
+  1710→9. **`/src/app/api/stats/route.ts`**
+  1711→   - Replaced all `db.*.count()` calls with `countRecords()` helper
+  1712→   - Replaced `db.publication.groupBy()` with `supabase.from('publications').select('publication_type')` + client-side reduce
+  1713→   - Replaced `db.fundingScheme.groupBy()` with `supabase.from('funding_schemes').select('status')` + client-side reduce
+  1714→   - Replaced `db.*.findMany()` for recent items with Supabase select + order + limit
+  1715→   - All recent items map `created_at` → `createdAt` for frontend compatibility
+  1716→
+  1717→### Key Patterns Applied
+  1718→
+  1719→| Prisma Pattern | Supabase Equivalent |
+  1720→|---|---|
+  1721→| `db.profile.findUnique({ where: { email } })` | `supabase.from('profiles').select('*').eq('email', email).single()` |
+  1722→| `db.siteSetting.findFirst()` | `supabase.from('site_settings').select('*').limit(1).single()` |
+  1723→| `db.profile.findMany({ where, orderBy, skip, take })` | `supabase.from('profiles').select('*', { count: 'exact' }).range(from, to).order(...)` |
+  1724→| `db.profile.create({ data })` | `supabase.from('profiles').insert(snakeCaseData).select().single()` |
+  1725→| `db.profile.update({ where: { id }, data })` | `supabase.from('profiles').update(snakeCaseData).eq('id', id).select().single()` |
+  1726→| `db.profile.delete({ where: { id } })` | `supabase.from('profiles').delete().eq('id', id)` |
+  1727→| `db.*.count({ where })` | `countRecords('table', { filter_key: value })` |
+  1728→| `db.*.groupBy({ by, _count })` | `supabase.from('table').select('column')` + client-side reduce |
+  1729→
+  1730→### Column Name Mappings (camelCase → snake_case)
+  1731→
+  1732→- `fullName` → `full_name`, `avatarUrl` → `avatar_url`, `isActive` → `is_active`
+  1733→- `createdAt` → `created_at`, `updatedAt` → `updated_at`
+  1734→- `siteName` → `site_name`, `lppmName` → `lppm_name`, `logoUrl` → `logo_url`
+  1735→- `lppmLogoUrl` → `lppm_logo_url`, `faviconUrl` → `favicon_url`
+  1736→- `googleMapsUrl` → `google_maps_url`, `facebookUrl` → `facebook_url`
+  1737→- `instagramUrl` → `instagram_url`, `youtubeUrl` → `youtube_url`
+  1738→- `seoTitle` → `seo_title`, `seoDescription` → `seo_description`
+  1739→- `chairmanName` → `chairman_name`, `chairmanPhotoUrl` → `chairman_photo_url`
+  1740→- `chairmanMessage` → `chairman_message`, `structureImageUrl` → `structure_image_url`
+  1741→- `activityLogs` → `activity_logs`
+  1742→
+  1743→### Response Format
+  1744→All API responses maintain camelCase field names for frontend compatibility by using mapping functions (`mapProfile`, `mapSiteSetting`, `mapLppmProfile`) that convert snake_case Supabase results back to camelCase.
+  1745→
+  1746→### Lint Status
+  1747→- 0 new errors from the rewritten files
+  1748→- Pre-existing warnings (React Hook Form compatibility) remain unchanged
+  1749→

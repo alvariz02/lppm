@@ -1,5 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/db'
+
+function mapContactMessage(m: Record<string, unknown>) {
+  return {
+    id: m.id,
+    name: m.name,
+    email: m.email,
+    phone: m.phone ?? null,
+    subject: m.subject ?? null,
+    message: m.message,
+    isRead: m.is_read ?? false,
+    createdAt: m.created_at,
+    updatedAt: m.updated_at,
+  }
+}
 
 export async function GET(
   _request: NextRequest,
@@ -7,16 +21,20 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const message = await db.contactMessage.findUnique({ where: { id } })
+    const { data: message, error } = await supabase
+      .from('contact_messages')
+      .select('*')
+      .eq('id', id)
+      .single()
 
-    if (!message) {
+    if (error || !message) {
       return NextResponse.json(
         { error: 'Message not found' },
         { status: 404 }
       )
     }
 
-    return NextResponse.json({ data: message })
+    return NextResponse.json({ data: mapContactMessage(message) })
   } catch (error) {
     console.error('[API_ADMIN_MESSAGES_GET_ID]', error)
     return NextResponse.json(
@@ -34,7 +52,12 @@ export async function PUT(
     const { id } = await params
     const body = await request.json()
 
-    const existing = await db.contactMessage.findUnique({ where: { id } })
+    const { data: existing } = await supabase
+      .from('contact_messages')
+      .select('id, is_read')
+      .eq('id', id)
+      .single()
+
     if (!existing) {
       return NextResponse.json(
         { error: 'Message not found' },
@@ -42,14 +65,24 @@ export async function PUT(
       )
     }
 
-    const message = await db.contactMessage.update({
-      where: { id },
-      data: {
-        isRead: body.isRead ?? existing.isRead,
-      },
-    })
+    const { data: message, error } = await supabase
+      .from('contact_messages')
+      .update({
+        is_read: body.isRead ?? existing.is_read,
+      })
+      .eq('id', id)
+      .select()
+      .single()
 
-    return NextResponse.json({ success: true, data: message })
+    if (error) {
+      console.error('[API_ADMIN_MESSAGES_PUT]', error)
+      return NextResponse.json(
+        { error: 'Failed to update message' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true, data: mapContactMessage(message) })
   } catch (error) {
     console.error('[API_ADMIN_MESSAGES_PUT]', error)
     return NextResponse.json(
@@ -66,7 +99,12 @@ export async function DELETE(
   try {
     const { id } = await params
 
-    const existing = await db.contactMessage.findUnique({ where: { id } })
+    const { data: existing } = await supabase
+      .from('contact_messages')
+      .select('id')
+      .eq('id', id)
+      .single()
+
     if (!existing) {
       return NextResponse.json(
         { error: 'Message not found' },
@@ -74,7 +112,15 @@ export async function DELETE(
       )
     }
 
-    await db.contactMessage.delete({ where: { id } })
+    const { error } = await supabase.from('contact_messages').delete().eq('id', id)
+
+    if (error) {
+      console.error('[API_ADMIN_MESSAGES_DELETE]', error)
+      return NextResponse.json(
+        { error: 'Failed to delete message' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({ success: true, message: 'Message deleted' })
   } catch (error) {

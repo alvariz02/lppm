@@ -1,6 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase, paginateQuery } from '@/lib/db'
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants'
+
+function mapCommunityService(r: any) {
+  return {
+    id: r.id,
+    title: r.title,
+    slug: r.slug,
+    summary: r.summary,
+    location: r.location,
+    village: r.village,
+    district: r.district,
+    regency: r.regency,
+    year: r.year,
+    fundingSchemeId: r.funding_scheme_id,
+    leaderId: r.leader_id,
+    facultyId: r.faculty_id,
+    studyProgramId: r.study_program_id,
+    partnerName: r.partner_name,
+    fundingSource: r.funding_source,
+    budget: r.budget,
+    startDate: r.start_date,
+    endDate: r.end_date,
+    status: r.status,
+    outputs: r.outputs,
+    impact: r.impact,
+    mainImageUrl: r.main_image_url,
+    documentUrl: r.document_url,
+    isFeatured: r.is_featured,
+    isPublished: r.is_published,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    leader: r.leader || null,
+    faculty: r.faculty || null,
+    fundingScheme: r.funding_scheme || null,
+    members: r.members || [],
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,70 +53,71 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search')
     const featured = searchParams.get('featured')
 
-    const where: Record<string, unknown> = {
-      isPublished: true,
-    }
+    const { from, to } = paginateQuery(page, pageSize)
+
+    let query = supabase
+      .from('community_services')
+      .select(
+        '*, leader:researchers!leader_id(id, name, nidn, photo_url, expertise), faculty:faculties!faculty_id(id, name, slug), funding_scheme:funding_schemes!funding_scheme_id(id, name, slug, source, year)',
+        { count: 'exact' }
+      )
+      .eq('is_published', true)
+      .range(from, to)
 
     if (year) {
-      where.year = parseInt(year)
+      query = query.eq('year', parseInt(year))
     }
-
     if (status) {
-      where.status = status
+      query = query.eq('status', status)
     }
-
     if (fundingSchemeId) {
-      where.fundingSchemeId = fundingSchemeId
+      query = query.eq('funding_scheme_id', fundingSchemeId)
     }
-
     if (facultyId) {
-      where.facultyId = facultyId
+      query = query.eq('faculty_id', facultyId)
     }
-
     if (featured === 'true') {
-      where.isFeatured = true
+      query = query.eq('is_featured', true)
     }
-
     if (search) {
-      where.title = { contains: search }
+      query = query.ilike('title', `%${search}%`)
     }
 
-    const [data, total] = await Promise.all([
-      db.communityService.findMany({
-        where,
-        include: {
-          leader: {
-            select: {
-              id: true,
-              name: true,
-              nidn: true,
-              photoUrl: true,
-              expertise: true,
-            },
-          },
-          faculty: {
-            select: { id: true, name: true, slug: true },
-          },
-          fundingScheme: {
-            select: { id: true, name: true, slug: true, source: true, year: true },
-          },
-          members: {
-            include: {
-              researcher: {
-                select: { id: true, name: true, nidn: true, photoUrl: true },
-              },
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      db.communityService.count({ where }),
-    ])
+    query = query.order('created_at', { ascending: false })
+
+    const { data, count, error } = await query
+
+    if (error) {
+      console.error('[API_COMMUNITY_SERVICE_GET]', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch community service data' },
+        { status: 500 }
+      )
+    }
+
+    // Fetch members for each community service
+    const serviceIds = (data || []).map((r: any) => r.id)
+    let membersData: any[] = []
+    if (serviceIds.length > 0) {
+      const { data: members } = await supabase
+        .from('community_service_members')
+        .select('*, researcher:researchers(id, name, nidn, photo_url)')
+        .in('service_id', serviceIds)
+      membersData = members || []
+    }
+
+    const mappedData = (data || []).map((r: any) => {
+      const serviceMembers = membersData.filter((m: any) => m.service_id === r.id)
+      return {
+        ...mapCommunityService(r),
+        members: serviceMembers,
+      }
+    })
+
+    const total = count ?? 0
 
     return NextResponse.json({
-      data,
+      data: mappedData,
       total,
       page,
       pageSize,

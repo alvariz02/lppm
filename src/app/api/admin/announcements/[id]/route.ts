@@ -1,7 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/db'
 import { announcementSchema } from '@/lib/validations'
 import { generateSlug } from '@/lib/helpers'
+
+function mapAnnouncement(a: Record<string, unknown>) {
+  return {
+    id: a.id,
+    title: a.title,
+    slug: a.slug,
+    content: a.content ?? null,
+    attachmentUrl: a.attachment_url ?? null,
+    type: a.type,
+    status: a.status,
+    publishedAt: a.published_at ?? null,
+    expiredAt: a.expired_at ?? null,
+    createdAt: a.created_at,
+    updatedAt: a.updated_at,
+  }
+}
 
 export async function GET(
   _request: NextRequest,
@@ -9,16 +25,20 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const announcement = await db.announcement.findUnique({ where: { id } })
+    const { data, error } = await supabase
+      .from('announcements')
+      .select('*')
+      .eq('id', id)
+      .single()
 
-    if (!announcement) {
+    if (error || !data) {
       return NextResponse.json(
         { error: 'Announcement not found' },
         { status: 404 }
       )
     }
 
-    return NextResponse.json({ data: announcement })
+    return NextResponse.json({ data: mapAnnouncement(data) })
   } catch (error) {
     console.error('[API_ADMIN_ANNOUNCEMENTS_GET_ID]', error)
     return NextResponse.json(
@@ -37,8 +57,13 @@ export async function PUT(
     const body = await request.json()
     const validated = announcementSchema.parse(body)
 
-    const existing = await db.announcement.findUnique({ where: { id } })
-    if (!existing) {
+    const { data: existing, error: existingError } = await supabase
+      .from('announcements')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (existingError || !existing) {
       return NextResponse.json(
         { error: 'Announcement not found' },
         { status: 404 }
@@ -46,24 +71,44 @@ export async function PUT(
     }
 
     const slug = generateSlug(validated.title)
-    const slugConflict = await db.announcement.findUnique({ where: { slug } })
+    const { data: slugConflict } = await supabase
+      .from('announcements')
+      .select('id')
+      .eq('slug', slug)
+      .single()
     const finalSlug = slugConflict && slugConflict.id !== id ? `${slug}-${Date.now()}` : slug
 
-    const announcement = await db.announcement.update({
-      where: { id },
-      data: {
+    const { data, error } = await supabase
+      .from('announcements')
+      .update({
         title: validated.title,
         slug: finalSlug,
         content: validated.content ?? null,
-        attachmentUrl: validated.attachmentUrl ?? null,
+        attachment_url: validated.attachmentUrl ?? null,
         type: validated.type,
         status: validated.status,
-        publishedAt: validated.publishedAt ? new Date(validated.publishedAt) : (validated.status === 'active' && !existing.publishedAt ? new Date() : existing.publishedAt),
-        expiredAt: validated.expiredAt ? new Date(validated.expiredAt) : null,
-      },
-    })
+        published_at: validated.publishedAt
+          ? new Date(validated.publishedAt).toISOString()
+          : validated.status === 'active' && !existing.published_at
+            ? new Date().toISOString()
+            : existing.published_at,
+        expired_at: validated.expiredAt
+          ? new Date(validated.expiredAt).toISOString()
+          : null,
+      })
+      .eq('id', id)
+      .select()
+      .single()
 
-    return NextResponse.json({ success: true, data: announcement })
+    if (error) {
+      console.error('[API_ADMIN_ANNOUNCEMENTS_PUT]', error)
+      return NextResponse.json(
+        { error: 'Failed to update announcement' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true, data: mapAnnouncement(data) })
   } catch (error: unknown) {
     console.error('[API_ADMIN_ANNOUNCEMENTS_PUT]', error)
     if (error && typeof error === 'object' && 'issues' in error) {
@@ -86,15 +131,28 @@ export async function DELETE(
   try {
     const { id } = await params
 
-    const existing = await db.announcement.findUnique({ where: { id } })
-    if (!existing) {
+    const { data: existing, error: existingError } = await supabase
+      .from('announcements')
+      .select('id')
+      .eq('id', id)
+      .single()
+
+    if (existingError || !existing) {
       return NextResponse.json(
         { error: 'Announcement not found' },
         { status: 404 }
       )
     }
 
-    await db.announcement.delete({ where: { id } })
+    const { error } = await supabase.from('announcements').delete().eq('id', id)
+
+    if (error) {
+      console.error('[API_ADMIN_ANNOUNCEMENTS_DELETE]', error)
+      return NextResponse.json(
+        { error: 'Failed to delete announcement' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({ success: true, message: 'Announcement deleted' })
   } catch (error) {

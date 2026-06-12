@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/db'
 import { generateSlug } from '@/lib/helpers'
 
 export async function GET(
@@ -8,18 +8,30 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const category = await db.newsCategory.findUnique({
-      where: { id },
-      include: {
-        _count: { select: { news: true } },
-      },
-    })
+    const { data, error } = await supabase
+      .from('news_categories')
+      .select('id, name, slug, created_at, updated_at, news:news(count)')
+      .eq('id', id)
+      .single()
 
-    if (!category) {
+    if (error || !data) {
       return NextResponse.json({ error: 'Kategori berita tidak ditemukan' }, { status: 404 })
     }
 
-    return NextResponse.json({ data: category })
+    const item = data as Record<string, unknown>
+    const newsAgg = item.news as Array<Record<string, unknown>> | null
+    const newsCount = Array.isArray(newsAgg) && newsAgg.length > 0 ? Number(newsAgg[0].count) : 0
+
+    const mapped = {
+      id: item.id,
+      name: item.name,
+      slug: item.slug,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+      _count: { news: newsCount },
+    }
+
+    return NextResponse.json({ data: mapped })
   } catch (error) {
     console.error('[NEWS_CATEGORY_GET]', error)
     return NextResponse.json({ error: 'Gagal memuat data kategori berita' }, { status: 500 })
@@ -39,17 +51,26 @@ export async function PUT(
       return NextResponse.json({ error: 'Nama kategori wajib diisi' }, { status: 400 })
     }
 
-    const existing = await db.newsCategory.findUnique({ where: { id } })
-    if (!existing) {
+    const { data: existing, error: existingError } = await supabase
+      .from('news_categories')
+      .select('id')
+      .eq('id', id)
+      .single()
+
+    if (existingError || !existing) {
       return NextResponse.json({ error: 'Kategori berita tidak ditemukan' }, { status: 404 })
     }
 
     const slug = generateSlug(name.trim())
 
     // Check slug uniqueness (exclude self)
-    const slugConflict = await db.newsCategory.findFirst({
-      where: { slug, id: { not: id } },
-    })
+    const { data: slugConflict } = await supabase
+      .from('news_categories')
+      .select('id')
+      .eq('slug', slug)
+      .neq('id', id)
+      .single()
+
     if (slugConflict) {
       return NextResponse.json(
         { error: 'Kategori berita dengan nama tersebut sudah ada' },
@@ -57,13 +78,32 @@ export async function PUT(
       )
     }
 
-    const category = await db.newsCategory.update({
-      where: { id },
-      data: { name: name.trim(), slug },
-      include: { _count: { select: { news: true } } },
-    })
+    const { data, error } = await supabase
+      .from('news_categories')
+      .update({ name: name.trim(), slug })
+      .eq('id', id)
+      .select('id, name, slug, created_at, updated_at, news:news(count)')
+      .single()
 
-    return NextResponse.json({ data: category })
+    if (error) {
+      console.error('[NEWS_CATEGORY_PUT]', error)
+      return NextResponse.json({ error: 'Gagal memperbarui kategori berita' }, { status: 500 })
+    }
+
+    const item = data as Record<string, unknown>
+    const newsAgg = item.news as Array<Record<string, unknown>> | null
+    const newsCount = Array.isArray(newsAgg) && newsAgg.length > 0 ? Number(newsAgg[0].count) : 0
+
+    const mapped = {
+      id: item.id,
+      name: item.name,
+      slug: item.slug,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+      _count: { news: newsCount },
+    }
+
+    return NextResponse.json({ data: mapped })
   } catch (error) {
     console.error('[NEWS_CATEGORY_PUT]', error)
     return NextResponse.json({ error: 'Gagal memperbarui kategori berita' }, { status: 500 })
@@ -77,23 +117,34 @@ export async function DELETE(
   try {
     const { id } = await params
 
-    const existing = await db.newsCategory.findUnique({
-      where: { id },
-      include: { _count: { select: { news: true } } },
-    })
-    if (!existing) {
+    const { data: existing, error: existingError } = await supabase
+      .from('news_categories')
+      .select('id, name, slug, created_at, updated_at, news:news(count)')
+      .eq('id', id)
+      .single()
+
+    if (existingError || !existing) {
       return NextResponse.json({ error: 'Kategori berita tidak ditemukan' }, { status: 404 })
     }
 
     // Check if any news uses this category
-    if (existing._count.news > 0) {
+    const item = existing as Record<string, unknown>
+    const newsAgg = item.news as Array<Record<string, unknown>> | null
+    const newsCount = Array.isArray(newsAgg) && newsAgg.length > 0 ? Number(newsAgg[0].count) : 0
+
+    if (newsCount > 0) {
       return NextResponse.json(
-        { error: `Kategori ini masih digunakan oleh ${existing._count.news} berita. Hapus atau pindahkan berita terlebih dahulu.` },
+        { error: `Kategori ini masih digunakan oleh ${newsCount} berita. Hapus atau pindahkan berita terlebih dahulu.` },
         { status: 400 }
       )
     }
 
-    await db.newsCategory.delete({ where: { id } })
+    const { error } = await supabase.from('news_categories').delete().eq('id', id)
+
+    if (error) {
+      console.error('[NEWS_CATEGORY_DELETE]', error)
+      return NextResponse.json({ error: 'Gagal menghapus kategori berita' }, { status: 500 })
+    }
 
     return NextResponse.json({ message: 'Kategori berita berhasil dihapus' })
   } catch (error) {

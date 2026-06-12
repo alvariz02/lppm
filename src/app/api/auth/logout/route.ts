@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 
+// This route does not use the database — only clears auth cookies.
+// No changes needed for Supabase migration.
+
 export async function POST() {
   const response = NextResponse.json({ success: true, message: 'Logout berhasil' })
 

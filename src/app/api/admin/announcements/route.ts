@@ -1,8 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase, paginateQuery } from '@/lib/db'
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants'
 import { announcementSchema } from '@/lib/validations'
 import { generateSlug } from '@/lib/helpers'
+
+function mapAnnouncement(a: Record<string, unknown>) {
+  return {
+    id: a.id,
+    title: a.title,
+    slug: a.slug,
+    content: a.content ?? null,
+    attachmentUrl: a.attachment_url ?? null,
+    type: a.type,
+    status: a.status,
+    publishedAt: a.published_at ?? null,
+    expiredAt: a.expired_at ?? null,
+    createdAt: a.created_at,
+    updatedAt: a.updated_at,
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,35 +32,42 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type')
     const search = searchParams.get('search')
 
-    const where: Record<string, unknown> = {}
+    const { from, to } = paginateQuery(page, pageSize)
+
+    let query = supabase
+      .from('announcements')
+      .select('*', { count: 'exact' })
+      .range(from, to)
 
     if (status) {
-      where.status = status
+      query = query.eq('status', status)
     }
 
     if (type) {
-      where.type = type
+      query = query.eq('type', type)
     }
 
     if (search) {
-      where.OR = [
-        { title: { contains: search } },
-        { content: { contains: search } },
-      ]
+      query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`)
     }
 
-    const [data, total] = await Promise.all([
-      db.announcement.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      db.announcement.count({ where }),
-    ])
+    query = query.order('created_at', { ascending: false })
+
+    const { data, count, error } = await query
+
+    if (error) {
+      console.error('[API_ADMIN_ANNOUNCEMENTS_GET]', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch announcements' },
+        { status: 500 }
+      )
+    }
+
+    const mapped = (data ?? []).map(mapAnnouncement)
+    const total = count ?? 0
 
     return NextResponse.json({
-      data,
+      data: mapped,
       total,
       page,
       pageSize,
@@ -65,23 +88,43 @@ export async function POST(request: NextRequest) {
     const validated = announcementSchema.parse(body)
 
     const slug = generateSlug(validated.title)
-    const existing = await db.announcement.findUnique({ where: { slug } })
+    const { data: existing } = await supabase
+      .from('announcements')
+      .select('id')
+      .eq('slug', slug)
+      .single()
     const finalSlug = existing ? `${slug}-${Date.now()}` : slug
 
-    const announcement = await db.announcement.create({
-      data: {
+    const { data, error } = await supabase
+      .from('announcements')
+      .insert({
         title: validated.title,
         slug: finalSlug,
         content: validated.content ?? null,
-        attachmentUrl: validated.attachmentUrl ?? null,
+        attachment_url: validated.attachmentUrl ?? null,
         type: validated.type,
         status: validated.status,
-        publishedAt: validated.publishedAt ? new Date(validated.publishedAt) : (validated.status === 'active' ? new Date() : null),
-        expiredAt: validated.expiredAt ? new Date(validated.expiredAt) : null,
-      },
-    })
+        published_at: validated.publishedAt
+          ? new Date(validated.publishedAt).toISOString()
+          : validated.status === 'active'
+            ? new Date().toISOString()
+            : null,
+        expired_at: validated.expiredAt
+          ? new Date(validated.expiredAt).toISOString()
+          : null,
+      })
+      .select()
+      .single()
 
-    return NextResponse.json({ success: true, data: announcement }, { status: 201 })
+    if (error) {
+      console.error('[API_ADMIN_ANNOUNCEMENTS_POST]', error)
+      return NextResponse.json(
+        { error: 'Failed to create announcement' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true, data: mapAnnouncement(data) }, { status: 201 })
   } catch (error: unknown) {
     console.error('[API_ADMIN_ANNOUNCEMENTS_POST]', error)
     if (error && typeof error === 'object' && 'issues' in error) {

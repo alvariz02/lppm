@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/db'
 import {
   formatDate,
   formatCurrency,
@@ -40,10 +40,12 @@ type PageProps = {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params
-  const item = await db.research.findUnique({
-    where: { slug },
-    select: { title: true, abstract: true },
-  })
+  const { data: item } = await supabase
+    .from('research')
+    .select('title, abstract')
+    .eq('slug', slug)
+    .single()
+
   if (!item) return { title: 'Tidak Ditemukan' }
   return {
     title: `${item.title} | LPPM Kampus`,
@@ -56,58 +58,74 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function PenelitianDetailPage({ params }: PageProps) {
   const { slug } = await params
 
-  const research = await db.research.findUnique({
-    where: { slug },
-    include: {
-      leader: {
-        select: {
-          id: true,
-          name: true,
-          nidn: true,
-          photoUrl: true,
-          expertise: true,
-          email: true,
-          degree: true,
-          functionalPosition: true,
-          faculty: { select: { name: true } },
-          studyProgram: { select: { name: true } },
-        },
-      },
-      faculty: { select: { name: true } },
-      studyProgram: { select: { name: true } },
-      fundingScheme: { select: { name: true, source: true, slug: true } },
-      members: {
-        include: {
-          researcher: {
-            select: {
-              id: true,
-              name: true,
-              nidn: true,
-              photoUrl: true,
-              expertise: true,
-              degree: true,
-            },
-          },
-        },
-      },
-      studentMembers: true,
-      publications: {
-        where: { isPublished: true },
-        select: {
-          id: true,
-          title: true,
-          slug: true,
-          publicationType: true,
-          year: true,
-          journalName: true,
-        },
-        take: 5,
-        orderBy: { year: 'desc' },
-      },
-    },
-  })
+  // Get main record with joins
+  const { data: rawResearch } = await supabase
+    .from('research')
+    .select(`*, leader:researchers!leader_id(id, name, nidn, photo_url, expertise, email, degree, functional_position, faculty:facilities(id, name), study_program:study_programs(id, name)), faculty:faculties(id, name), study_program:study_programs(id, name), funding_scheme:funding_schemes(id, name, source, slug)`)
+    .eq('slug', slug)
+    .single()
 
-  if (!research || !research.isPublished) return notFound()
+  if (!rawResearch || !rawResearch.is_published) return notFound()
+
+  // Map snake_case to camelCase for the component
+  const research: any = {
+    ...rawResearch,
+    fundingSchemeId: rawResearch.funding_scheme_id,
+    leaderId: rawResearch.leader_id,
+    facultyId: rawResearch.faculty_id,
+    studyProgramId: rawResearch.study_program_id,
+    fundingSource: rawResearch.funding_source,
+    startDate: rawResearch.start_date,
+    endDate: rawResearch.end_date,
+    mainImageUrl: rawResearch.main_image_url,
+    documentUrl: rawResearch.document_url,
+    isFeatured: rawResearch.is_featured,
+    isPublished: rawResearch.is_published,
+    createdAt: rawResearch.created_at,
+    updatedAt: rawResearch.updated_at,
+    leader: rawResearch.leader,
+    faculty: rawResearch.faculty,
+    studyProgram: rawResearch.study_program,
+    fundingScheme: rawResearch.funding_scheme,
+  }
+
+  // Get related data in parallel
+  const [membersRes, studentMembersRes, publicationsRes] = await Promise.all([
+    supabase
+      .from('research_members')
+      .select('*, researcher:researchers(id, name, nidn, photo_url, expertise, degree)')
+      .eq('research_id', research.id),
+    supabase
+      .from('research_student_members')
+      .select('*')
+      .eq('research_id', research.id),
+    supabase
+      .from('publications')
+      .select('id, title, slug, publication_type, year, journal_name')
+      .eq('research_id', research.id)
+      .eq('is_published', true)
+      .order('year', { ascending: false })
+      .limit(5),
+  ])
+
+  research.members = (membersRes.data || []).map((m: any) => ({
+    ...m,
+    researcherId: m.researcher_id,
+    researchId: m.research_id,
+    researcher: m.researcher,
+  }))
+
+  research.studentMembers = (studentMembersRes.data || []).map((m: any) => ({
+    ...m,
+    researchId: m.research_id,
+    studyProgram: m.study_program,
+  }))
+
+  research.publications = (publicationsRes.data || []).map((p: any) => ({
+    ...p,
+    publicationType: p.publication_type,
+    journalName: p.journal_name,
+  }))
 
   const statusLabel =
     PROJECT_STATUS_LABELS[research.status as keyof typeof PROJECT_STATUS_LABELS] || research.status
@@ -115,28 +133,26 @@ export default async function PenelitianDetailPage({ params }: PageProps) {
     PROJECT_STATUS_COLORS[research.status as keyof typeof PROJECT_STATUS_COLORS] || ''
 
   // Related research (same faculty or funding scheme, excluding current)
-  const relatedResearch = await db.research.findMany({
-    where: {
-      isPublished: true,
-      id: { not: research.id },
-      OR: [
-        ...(research.facultyId ? [{ facultyId: research.facultyId }] : []),
-        ...(research.fundingSchemeId ? [{ fundingSchemeId: research.fundingSchemeId }] : []),
-      ],
-    },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      year: true,
-      status: true,
-      abstract: true,
-      leader: { select: { name: true } },
-      fundingSource: true,
-    },
-    take: 3,
-    orderBy: { createdAt: 'desc' },
-  })
+  const orFilters: string[] = []
+  if (research.facultyId) orFilters.push(`faculty_id.eq.${research.facultyId}`)
+  if (research.fundingSchemeId) orFilters.push(`funding_scheme_id.eq.${research.fundingSchemeId}`)
+
+  let relatedResearch: any[] = []
+  if (orFilters.length > 0) {
+    const { data: relData } = await supabase
+      .from('research')
+      .select('id, title, slug, year, status, abstract, leader:researchers!leader_id(name), funding_source')
+      .eq('is_published', true)
+      .neq('id', research.id)
+      .or(orFilters.join(','))
+      .order('created_at', { ascending: false })
+      .limit(3)
+    relatedResearch = (relData || []).map((r: any) => ({
+      ...r,
+      fundingSource: r.funding_source,
+      leader: r.leader,
+    }))
+  }
 
   return (
     <div className="min-h-screen">
@@ -260,7 +276,7 @@ export default async function PenelitianDetailPage({ params }: PageProps) {
                           )}
                           {research.leader.expertise && (
                             <div className="flex flex-wrap gap-1 mt-1">
-                              {research.leader.expertise.split(',').map((exp, i) => (
+                              {research.leader.expertise.split(',').map((exp: string, i: number) => (
                                 <Badge key={i} variant="secondary" className="text-[10px]">
                                   {exp.trim()}
                                 </Badge>
@@ -279,7 +295,7 @@ export default async function PenelitianDetailPage({ params }: PageProps) {
                         Anggota Peneliti
                       </p>
                       <div className="space-y-2">
-                        {research.members.map((m) => (
+                        {research.members.map((m: any) => (
                           <div key={m.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/50">
                             <div className="size-10 rounded-full bg-secondary/20 flex items-center justify-center text-secondary font-bold text-xs shrink-0">
                               {getInitials(m.researcher.name)}
@@ -311,7 +327,7 @@ export default async function PenelitianDetailPage({ params }: PageProps) {
                         Anggota Mahasiswa
                       </p>
                       <div className="space-y-2">
-                        {research.studentMembers.map((sm) => (
+                        {research.studentMembers.map((sm: any) => (
                           <div key={sm.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/50">
                             <div className="size-10 rounded-full bg-accent/20 flex items-center justify-center text-accent-foreground font-bold text-xs shrink-0">
                               <GraduationCap className="size-4" />
@@ -362,7 +378,7 @@ export default async function PenelitianDetailPage({ params }: PageProps) {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {research.publications.map((pub) => (
+                    {research.publications.map((pub: any) => (
                       <Link
                         key={pub.id}
                         href={`/publikasi/${pub.slug}`}
@@ -494,7 +510,7 @@ export default async function PenelitianDetailPage({ params }: PageProps) {
               Penelitian Terkait
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {relatedResearch.map((item) => {
+              {relatedResearch.map((item: any) => {
                 const relStatusLabel =
                   PROJECT_STATUS_LABELS[item.status as keyof typeof PROJECT_STATUS_LABELS] ||
                   item.status

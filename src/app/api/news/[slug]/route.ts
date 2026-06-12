@@ -1,5 +1,25 @@
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+
+function mapNews(n: Record<string, unknown>) {
+  return {
+    id: n.id,
+    categoryId: n.category_id ?? null,
+    title: n.title,
+    slug: n.slug,
+    excerpt: n.excerpt ?? null,
+    content: n.content,
+    imageUrl: n.image_url ?? null,
+    status: n.status,
+    isFeatured: n.is_featured ?? false,
+    seoTitle: n.seo_title ?? null,
+    seoDescription: n.seo_description ?? null,
+    publishedAt: n.published_at ?? null,
+    createdAt: n.created_at,
+    updatedAt: n.updated_at,
+    category: n.category ? { id: (n.category as Record<string, unknown>).id, name: (n.category as Record<string, unknown>).name, slug: (n.category as Record<string, unknown>).slug } : null,
+  }
+}
 
 export async function GET(
   request: NextRequest,
@@ -8,23 +28,27 @@ export async function GET(
   try {
     const { slug } = await params
 
-    const news = await db.news.findUnique({
-      where: { slug },
-      include: {
-        category: {
-          select: { id: true, name: true, slug: true },
-        },
-      },
-    })
+    const { data, error } = await supabase
+      .from('news')
+      .select('*, category:news_categories(id, name, slug)')
+      .eq('slug', slug)
+      .single()
 
-    if (!news || news.status !== 'published') {
+    if (error || !data) {
       return NextResponse.json(
         { error: 'Not found' },
         { status: 404 }
       )
     }
 
-    return NextResponse.json({ data: news })
+    if (data.status !== 'published') {
+      return NextResponse.json(
+        { error: 'Not found' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json({ data: mapNews(data) })
   } catch (error) {
     console.error('[API_NEWS_GET]', error)
     return NextResponse.json(

@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/db'
 import { agendaSchema } from '@/lib/validations'
+
+function mapAgenda(a: Record<string, unknown>) {
+  return {
+    id: a.id,
+    title: a.title,
+    slug: a.slug,
+    description: a.description ?? null,
+    eventType: a.event_type ?? null,
+    startDate: a.start_date,
+    endDate: a.end_date ?? null,
+    location: a.location ?? null,
+    organizer: a.organizer ?? null,
+    posterUrl: a.poster_url ?? null,
+    status: a.status,
+    createdAt: a.created_at,
+    updatedAt: a.updated_at,
+  }
+}
 
 export async function GET(
   _req: NextRequest,
@@ -8,13 +26,17 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const agenda = await db.agenda.findUnique({ where: { id } })
+    const { data: agenda, error } = await supabase
+      .from('agenda')
+      .select('*')
+      .eq('id', id)
+      .single()
 
-    if (!agenda) {
+    if (error || !agenda) {
       return NextResponse.json({ error: 'Agenda tidak ditemukan' }, { status: 404 })
     }
 
-    return NextResponse.json({ data: agenda })
+    return NextResponse.json({ data: mapAgenda(agenda) })
   } catch (error) {
     console.error('[AGENDA_GET]', error)
     return NextResponse.json({ error: 'Gagal memuat data agenda' }, { status: 500 })
@@ -35,29 +57,41 @@ export async function PUT(
       return NextResponse.json({ error: errors }, { status: 400 })
     }
 
-    const existing = await db.agenda.findUnique({ where: { id } })
+    const { data: existing } = await supabase
+      .from('agenda')
+      .select('id')
+      .eq('id', id)
+      .single()
+
     if (!existing) {
       return NextResponse.json({ error: 'Agenda tidak ditemukan' }, { status: 404 })
     }
 
     const data = validation.data
 
-    const agenda = await db.agenda.update({
-      where: { id },
-      data: {
+    const { data: agenda, error } = await supabase
+      .from('agenda')
+      .update({
         title: data.title,
         description: data.description || null,
-        eventType: data.eventType || null,
-        startDate: new Date(data.startDate),
-        endDate: data.endDate ? new Date(data.endDate) : null,
+        event_type: data.eventType || null,
+        start_date: data.startDate,
+        end_date: data.endDate || null,
         location: data.location || null,
         organizer: data.organizer || null,
-        posterUrl: data.posterUrl || null,
+        poster_url: data.posterUrl || null,
         status: data.status,
-      },
-    })
+      })
+      .eq('id', id)
+      .select()
+      .single()
 
-    return NextResponse.json({ data: agenda })
+    if (error) {
+      console.error('[AGENDA_PUT]', error)
+      return NextResponse.json({ error: 'Gagal memperbarui agenda' }, { status: 500 })
+    }
+
+    return NextResponse.json({ data: mapAgenda(agenda) })
   } catch (error) {
     console.error('[AGENDA_PUT]', error)
     return NextResponse.json({ error: 'Gagal memperbarui agenda' }, { status: 500 })
@@ -71,12 +105,22 @@ export async function DELETE(
   try {
     const { id } = await params
 
-    const existing = await db.agenda.findUnique({ where: { id } })
+    const { data: existing } = await supabase
+      .from('agenda')
+      .select('id')
+      .eq('id', id)
+      .single()
+
     if (!existing) {
       return NextResponse.json({ error: 'Agenda tidak ditemukan' }, { status: 404 })
     }
 
-    await db.agenda.delete({ where: { id } })
+    const { error } = await supabase.from('agenda').delete().eq('id', id)
+
+    if (error) {
+      console.error('[AGENDA_DELETE]', error)
+      return NextResponse.json({ error: 'Gagal menghapus agenda' }, { status: 500 })
+    }
 
     return NextResponse.json({ message: 'Agenda berhasil dihapus' })
   } catch (error) {

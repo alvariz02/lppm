@@ -1,8 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase, paginateQuery } from '@/lib/db'
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants'
 import { publicationSchema } from '@/lib/validations'
 import { generateSlug } from '@/lib/helpers'
+
+function mapPublication(r: any) {
+  return {
+    id: r.id,
+    title: r.title,
+    slug: r.slug,
+    publicationType: r.publication_type,
+    authors: r.authors,
+    publisherName: r.publisher_name,
+    journalName: r.journal_name,
+    year: r.year,
+    volume: r.volume,
+    number: r.number,
+    pages: r.pages,
+    issn: r.issn,
+    isbn: r.isbn,
+    doi: r.doi,
+    url: r.url,
+    indexing: r.indexing,
+    accreditation: r.accreditation,
+    fileUrl: r.file_url,
+    researchId: r.research_id,
+    serviceId: r.service_id,
+    isPublished: r.is_published,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,44 +45,51 @@ export async function GET(request: NextRequest) {
     const isPublished = searchParams.get('isPublished')
     const search = searchParams.get('search')
 
-    const where: Record<string, unknown> = {}
+    const { from, to } = paginateQuery(page, pageSize)
+
+    let query = supabase
+      .from('publications')
+      .select(
+        '*, research:research!research_id(id, title), service:community_services!service_id(id, title)',
+        { count: 'exact' }
+      )
+      .range(from, to)
 
     if (publicationType) {
-      where.publicationType = publicationType
+      query = query.eq('publication_type', publicationType)
     }
-
     if (year) {
-      where.year = parseInt(year)
+      query = query.eq('year', parseInt(year))
     }
-
     if (isPublished !== null && isPublished !== undefined && isPublished !== '') {
-      where.isPublished = isPublished === 'true'
+      query = query.eq('is_published', isPublished === 'true')
     }
-
     if (search) {
-      where.OR = [
-        { title: { contains: search } },
-        { authors: { contains: search } },
-        { journalName: { contains: search } },
-      ]
+      query = query.or(`title.ilike.%${search}%,authors.ilike.%${search}%,journal_name.ilike.%${search}%`)
     }
 
-    const [data, total] = await Promise.all([
-      db.publication.findMany({
-        where,
-        include: {
-          research: { select: { id: true, title: true } },
-          service: { select: { id: true, title: true } },
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      db.publication.count({ where }),
-    ])
+    query = query.order('created_at', { ascending: false })
+
+    const { data, count, error } = await query
+
+    if (error) {
+      console.error('[API_ADMIN_PUBLICATIONS_GET]', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch publications' },
+        { status: 500 }
+      )
+    }
+
+    const mappedData = (data || []).map((r: any) => ({
+      ...mapPublication(r),
+      research: r.research || null,
+      service: r.service || null,
+    }))
+
+    const total = count ?? 0
 
     return NextResponse.json({
-      data,
+      data: mappedData,
       total,
       page,
       pageSize,
@@ -75,17 +110,22 @@ export async function POST(request: NextRequest) {
     const validated = publicationSchema.parse(body)
 
     const slug = generateSlug(validated.title)
-    const existing = await db.publication.findUnique({ where: { slug } })
-    const finalSlug = existing ? `${slug}-${Date.now()}` : slug
+    const { data: existing } = await supabase
+      .from('publications')
+      .select('id')
+      .eq('slug', slug)
+      .limit(1)
+    const finalSlug = existing && existing.length > 0 ? `${slug}-${Date.now()}` : slug
 
-    const publication = await db.publication.create({
-      data: {
+    const { data: publication, error } = await supabase
+      .from('publications')
+      .insert({
         title: validated.title,
         slug: finalSlug,
-        publicationType: validated.publicationType,
+        publication_type: validated.publicationType,
         authors: validated.authors ?? null,
-        publisherName: validated.publisherName ?? null,
-        journalName: validated.journalName ?? null,
+        publisher_name: validated.publisherName ?? null,
+        journal_name: validated.journalName ?? null,
         year: validated.year,
         volume: validated.volume ?? null,
         number: validated.number ?? null,
@@ -96,13 +136,23 @@ export async function POST(request: NextRequest) {
         url: validated.url ?? null,
         indexing: validated.indexing ?? null,
         accreditation: validated.accreditation ?? null,
-        researchId: validated.researchId ?? null,
-        serviceId: validated.serviceId ?? null,
-        isPublished: validated.isPublished ?? true,
-      },
-    })
+        file_url: validated.fileUrl ?? null,
+        research_id: validated.researchId ?? null,
+        service_id: validated.serviceId ?? null,
+        is_published: validated.isPublished ?? true,
+      })
+      .select()
+      .single()
 
-    return NextResponse.json({ success: true, data: publication }, { status: 201 })
+    if (error) {
+      console.error('[API_ADMIN_PUBLICATIONS_POST]', error)
+      return NextResponse.json(
+        { error: 'Failed to create publication' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true, data: mapPublication(publication) }, { status: 201 })
   } catch (error: unknown) {
     console.error('[API_ADMIN_PUBLICATIONS_POST]', error)
     if (error && typeof error === 'object' && 'issues' in error) {

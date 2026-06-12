@@ -1,8 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase, paginateQuery } from '@/lib/db'
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants'
 import { documentSchema } from '@/lib/validations'
 import { generateSlug } from '@/lib/helpers'
+
+function mapDocument(d: Record<string, unknown>) {
+  return {
+    id: d.id,
+    categoryId: d.category_id ?? null,
+    title: d.title,
+    slug: d.slug,
+    description: d.description ?? null,
+    fileUrl: d.file_url ?? null,
+    fileType: d.file_type ?? null,
+    fileSize: d.file_size ?? null,
+    downloadCount: d.download_count ?? 0,
+    isActive: d.is_active ?? true,
+    createdAt: d.created_at,
+    updatedAt: d.updated_at,
+    category: d.category ? { id: (d.category as Record<string, unknown>).id, name: (d.category as Record<string, unknown>).name } : null,
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,38 +34,42 @@ export async function GET(request: NextRequest) {
     const isActive = searchParams.get('isActive')
     const search = searchParams.get('search')
 
-    const where: Record<string, unknown> = {}
+    const { from, to } = paginateQuery(page, pageSize)
+
+    let query = supabase
+      .from('documents')
+      .select('*, category:document_categories(id, name)', { count: 'exact' })
+      .range(from, to)
 
     if (categoryId) {
-      where.categoryId = categoryId
+      query = query.eq('category_id', categoryId)
     }
 
     if (isActive !== null && isActive !== undefined && isActive !== '') {
-      where.isActive = isActive === 'true'
+      query = query.eq('is_active', isActive === 'true')
     }
 
     if (search) {
-      where.OR = [
-        { title: { contains: search } },
-        { description: { contains: search } },
-      ]
+      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`)
     }
 
-    const [data, total] = await Promise.all([
-      db.document.findMany({
-        where,
-        include: {
-          category: { select: { id: true, name: true } },
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      db.document.count({ where }),
-    ])
+    query = query.order('created_at', { ascending: false })
+
+    const { data, count, error } = await query
+
+    if (error) {
+      console.error('[API_ADMIN_DOCUMENTS_GET]', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch documents' },
+        { status: 500 }
+      )
+    }
+
+    const mapped = (data ?? []).map(mapDocument)
+    const total = count ?? 0
 
     return NextResponse.json({
-      data,
+      data: mapped,
       total,
       page,
       pageSize,
@@ -68,23 +90,37 @@ export async function POST(request: NextRequest) {
     const validated = documentSchema.parse(body)
 
     const slug = generateSlug(validated.title)
-    const existing = await db.document.findUnique({ where: { slug } })
+    const { data: existing } = await supabase
+      .from('documents')
+      .select('id')
+      .eq('slug', slug)
+      .single()
     const finalSlug = existing ? `${slug}-${Date.now()}` : slug
 
-    const document = await db.document.create({
-      data: {
+    const { data, error } = await supabase
+      .from('documents')
+      .insert({
         title: validated.title,
         slug: finalSlug,
-        categoryId: validated.categoryId ?? null,
+        category_id: validated.categoryId ?? null,
         description: validated.description ?? null,
-        fileUrl: validated.fileUrl ?? null,
-        fileType: validated.fileType ?? null,
-        fileSize: validated.fileSize ?? null,
-        isActive: validated.isActive ?? true,
-      },
-    })
+        file_url: validated.fileUrl ?? null,
+        file_type: validated.fileType ?? null,
+        file_size: validated.fileSize ?? null,
+        is_active: validated.isActive ?? true,
+      })
+      .select()
+      .single()
 
-    return NextResponse.json({ success: true, data: document }, { status: 201 })
+    if (error) {
+      console.error('[API_ADMIN_DOCUMENTS_POST]', error)
+      return NextResponse.json(
+        { error: 'Failed to create document' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true, data: mapDocument(data) }, { status: 201 })
   } catch (error: unknown) {
     console.error('[API_ADMIN_DOCUMENTS_POST]', error)
     if (error && typeof error === 'object' && 'issues' in error) {

@@ -1,10 +1,9 @@
 import { MetadataRoute } from 'next'
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/db'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lppm.kampus.ac.id'
 
-  // Static pages
   const staticPages = [
     { url: baseUrl, lastModified: new Date(), changeFrequency: 'daily' as const, priority: 1.0 },
     { url: `${baseUrl}/profil`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.8 },
@@ -22,22 +21,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/kontak`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.5 },
   ]
 
-  // Dynamic pages from database
   try {
-    const researches = await db.research.findMany({ where: { isPublished: true }, select: { slug: true, updatedAt: true } })
-    const services = await db.communityService.findMany({ where: { isPublished: true }, select: { slug: true, updatedAt: true } })
-    const publications = await db.publication.findMany({ where: { isPublished: true }, select: { slug: true, updatedAt: true } })
-    const news = await db.news.findMany({ where: { status: 'published' }, select: { slug: true, updatedAt: true } })
-    const announcements = await db.announcement.findMany({ where: { status: 'active' }, select: { slug: true, updatedAt: true } })
-    const fundingSchemes = await db.fundingScheme.findMany({ select: { slug: true, updatedAt: true } })
+    const [researchRes, servicesRes, publicationsRes, newsRes, announcementsRes, fundingRes] = await Promise.all([
+      supabase.from('research').select('slug, updated_at').eq('is_published', true),
+      supabase.from('community_services').select('slug, updated_at').eq('is_published', true),
+      supabase.from('publications').select('slug, updated_at').eq('is_published', true),
+      supabase.from('news').select('slug, updated_at').eq('status', 'published'),
+      supabase.from('announcements').select('slug, updated_at').eq('status', 'active'),
+      supabase.from('funding_schemes').select('slug, updated_at'),
+    ])
 
     const dynamicPages = [
-      ...researches.map(r => ({ url: `${baseUrl}/penelitian/${r.slug}`, lastModified: r.updatedAt, changeFrequency: 'monthly' as const, priority: 0.7 })),
-      ...services.map(s => ({ url: `${baseUrl}/pengabdian/${s.slug}`, lastModified: s.updatedAt, changeFrequency: 'monthly' as const, priority: 0.7 })),
-      ...publications.map(p => ({ url: `${baseUrl}/publikasi/${p.slug}`, lastModified: p.updatedAt, changeFrequency: 'monthly' as const, priority: 0.6 })),
-      ...news.map(n => ({ url: `${baseUrl}/berita/${n.slug}`, lastModified: n.updatedAt, changeFrequency: 'monthly' as const, priority: 0.7 })),
-      ...announcements.map(a => ({ url: `${baseUrl}/pengumuman/${a.slug}`, lastModified: a.updatedAt, changeFrequency: 'monthly' as const, priority: 0.6 })),
-      ...fundingSchemes.map(f => ({ url: `${baseUrl}/hibah/${f.slug}`, lastModified: f.updatedAt, changeFrequency: 'monthly' as const, priority: 0.7 })),
+      ...(researchRes.data || []).map(r => ({ url: `${baseUrl}/penelitian/${r.slug}`, lastModified: new Date(r.updated_at), changeFrequency: 'monthly' as const, priority: 0.7 })),
+      ...(servicesRes.data || []).map(s => ({ url: `${baseUrl}/pengabdian/${s.slug}`, lastModified: new Date(s.updated_at), changeFrequency: 'monthly' as const, priority: 0.7 })),
+      ...(publicationsRes.data || []).map(p => ({ url: `${baseUrl}/publikasi/${p.slug}`, lastModified: new Date(p.updated_at), changeFrequency: 'monthly' as const, priority: 0.6 })),
+      ...(newsRes.data || []).map(n => ({ url: `${baseUrl}/berita/${n.slug}`, lastModified: new Date(n.updated_at), changeFrequency: 'monthly' as const, priority: 0.7 })),
+      ...(announcementsRes.data || []).map(a => ({ url: `${baseUrl}/pengumuman/${a.slug}`, lastModified: new Date(a.updated_at), changeFrequency: 'monthly' as const, priority: 0.6 })),
+      ...(fundingRes.data || []).map(f => ({ url: `${baseUrl}/hibah/${f.slug}`, lastModified: new Date(f.updated_at), changeFrequency: 'monthly' as const, priority: 0.7 })),
     ]
 
     return [...staticPages, ...dynamicPages]

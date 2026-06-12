@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/db'
 import { profileSchema } from '@/lib/validations'
+
+function mapProfile(p: any) {
+  return {
+    id: p.id,
+    email: p.email,
+    password: p.password,
+    fullName: p.full_name,
+    avatarUrl: p.avatar_url,
+    role: p.role,
+    isActive: p.is_active,
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+  }
+}
 
 export async function GET(
   _request: NextRequest,
@@ -8,16 +22,20 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const profile = await db.profile.findUnique({ where: { id } })
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', id)
+      .single()
 
-    if (!profile) {
+    if (error || !profile) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       )
     }
 
-    return NextResponse.json({ data: profile })
+    return NextResponse.json({ data: mapProfile(profile) })
   } catch (error) {
     console.error('[API_ADMIN_USERS_GET_ID]', error)
     return NextResponse.json(
@@ -36,8 +54,14 @@ export async function PUT(
     const body = await request.json()
     const validated = profileSchema.parse(body)
 
-    const existing = await db.profile.findUnique({ where: { id } })
-    if (!existing) {
+    // Check if user exists
+    const { data: existing, error: existingError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (existingError || !existing) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
@@ -46,7 +70,12 @@ export async function PUT(
 
     // Check email uniqueness if email is being changed
     if (validated.email !== existing.email) {
-      const emailConflict = await db.profile.findUnique({ where: { email: validated.email } })
+      const { data: emailConflict } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', validated.email)
+        .single()
+
       if (emailConflict) {
         return NextResponse.json(
           { error: 'Email sudah terdaftar' },
@@ -55,19 +84,30 @@ export async function PUT(
       }
     }
 
-    const profile = await db.profile.update({
-      where: { id },
-      data: {
-        email: validated.email,
-        ...(validated.password ? { password: validated.password } : {}),
-        fullName: validated.fullName ?? null,
-        avatarUrl: validated.avatarUrl ?? null,
-        role: validated.role,
-        isActive: validated.isActive ?? existing.isActive,
-      },
-    })
+    // Build update data
+    const updateData: Record<string, any> = {
+      email: validated.email,
+      full_name: validated.fullName ?? null,
+      avatar_url: validated.avatarUrl ?? null,
+      role: validated.role,
+      is_active: validated.isActive ?? existing.is_active,
+    }
 
-    return NextResponse.json({ success: true, data: profile })
+    // Only update password if provided
+    if (validated.password) {
+      updateData.password = validated.password
+    }
+
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return NextResponse.json({ success: true, data: mapProfile(profile) })
   } catch (error: unknown) {
     console.error('[API_ADMIN_USERS_PUT]', error)
     if (error && typeof error === 'object' && 'issues' in error) {
@@ -90,15 +130,26 @@ export async function DELETE(
   try {
     const { id } = await params
 
-    const existing = await db.profile.findUnique({ where: { id } })
-    if (!existing) {
+    // Check if user exists
+    const { data: existing, error: existingError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', id)
+      .single()
+
+    if (existingError || !existing) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       )
     }
 
-    await db.profile.delete({ where: { id } })
+    const { error } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
 
     return NextResponse.json({ success: true, message: 'User deleted' })
   } catch (error) {

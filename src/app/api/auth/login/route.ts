@@ -1,5 +1,19 @@
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+
+function mapProfile(p: any) {
+  return {
+    id: p.id,
+    email: p.email,
+    password: p.password,
+    fullName: p.full_name,
+    avatarUrl: p.avatar_url,
+    role: p.role,
+    isActive: p.is_active,
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,9 +27,13 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const profile = await db.profile.findUnique({ where: { email } })
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('email', email)
+      .single()
 
-    if (!profile || !profile.isActive) {
+    if (error || !profile || !profile.is_active) {
       return NextResponse.json(
         { error: 'Email tidak terdaftar atau akun tidak aktif' },
         { status: 401 }
@@ -31,18 +49,20 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const mapped = mapProfile(profile)
+
     const response = NextResponse.json({
       success: true,
       data: {
-        id: profile.id,
-        email: profile.email,
-        fullName: profile.fullName,
-        role: profile.role,
+        id: mapped.id,
+        email: mapped.email,
+        fullName: mapped.fullName,
+        role: mapped.role,
       },
     })
 
     // Set auth cookie for middleware to check (user ID)
-    response.cookies.set('lppm_auth', profile.id, {
+    response.cookies.set('lppm_auth', mapped.id, {
       path: '/',
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
@@ -51,7 +71,7 @@ export async function POST(req: NextRequest) {
     })
 
     // Set role cookie for middleware role-based route protection
-    response.cookies.set('lppm_role', profile.role, {
+    response.cookies.set('lppm_role', mapped.role, {
       path: '/',
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',

@@ -1,8 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase, paginateQuery } from '@/lib/db'
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants'
 import { partnerSchema } from '@/lib/validations'
 import { generateSlug } from '@/lib/helpers'
+
+function mapPartner(p: Record<string, unknown>) {
+  return {
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    partnerType: p.partner_type,
+    address: p.address ?? null,
+    contactPerson: p.contact_person ?? null,
+    email: p.email ?? null,
+    phone: p.phone ?? null,
+    cooperationType: p.cooperation_type ?? null,
+    startDate: p.start_date ?? null,
+    endDate: p.end_date ?? null,
+    status: p.status,
+    logoUrl: p.logo_url ?? null,
+    documentUrl: p.document_url ?? null,
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+  }
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,34 +37,37 @@ export async function GET(req: NextRequest) {
     const partnerType = searchParams.get('partnerType') || ''
     const status = searchParams.get('status') || ''
 
-    const where: Record<string, unknown> = {}
+    const { from, to } = paginateQuery(page, pageSize)
+
+    let query = supabase
+      .from('partners')
+      .select('*', { count: 'exact' })
+      .range(from, to)
+
     if (search) {
-      where.OR = [
-        { name: { contains: search } },
-        { contactPerson: { contains: search } },
-        { email: { contains: search } },
-        { cooperationType: { contains: search } },
-      ]
+      query = query.or(`name.ilike.%${search}%,contact_person.ilike.%${search}%,email.ilike.%${search}%,cooperation_type.ilike.%${search}%`)
     }
     if (partnerType) {
-      where.partnerType = partnerType
+      query = query.eq('partner_type', partnerType)
     }
     if (status) {
-      where.status = status
+      query = query.eq('status', status)
     }
 
-    const [data, total] = await Promise.all([
-      db.partner.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      db.partner.count({ where }),
-    ])
+    query = query.order('created_at', { ascending: false })
+
+    const { data, count, error } = await query
+
+    if (error) {
+      console.error('[PARTNERS_GET]', error)
+      return NextResponse.json({ error: 'Gagal memuat data mitra' }, { status: 500 })
+    }
+
+    const mapped = (data ?? []).map(mapPartner)
+    const total = count ?? 0
 
     return NextResponse.json({
-      data,
+      data: mapped,
       total,
       page,
       pageSize,
@@ -69,30 +93,41 @@ export async function POST(req: NextRequest) {
 
     // Generate unique slug
     let slug = generateSlug(data.name)
-    const existing = await db.partner.findUnique({ where: { slug } })
+    const { data: existing } = await supabase
+      .from('partners')
+      .select('id')
+      .eq('slug', slug)
+      .single()
     if (existing) {
       slug = `${slug}-${Date.now()}`
     }
 
-    const partner = await db.partner.create({
-      data: {
+    const { data: partner, error } = await supabase
+      .from('partners')
+      .insert({
         name: data.name,
         slug,
-        partnerType: data.partnerType,
+        partner_type: data.partnerType,
         address: data.address || null,
-        contactPerson: data.contactPerson || null,
+        contact_person: data.contactPerson || null,
         email: data.email || null,
         phone: data.phone || null,
-        cooperationType: data.cooperationType || null,
-        startDate: data.startDate ? new Date(data.startDate) : null,
-        endDate: data.endDate ? new Date(data.endDate) : null,
+        cooperation_type: data.cooperationType || null,
+        start_date: data.startDate || null,
+        end_date: data.endDate || null,
         status: data.status,
-        logoUrl: data.logoUrl || null,
-        documentUrl: data.documentUrl || null,
-      },
-    })
+        logo_url: data.logoUrl || null,
+        document_url: data.documentUrl || null,
+      })
+      .select()
+      .single()
 
-    return NextResponse.json({ data: partner }, { status: 201 })
+    if (error) {
+      console.error('[PARTNERS_POST]', error)
+      return NextResponse.json({ error: 'Gagal membuat mitra' }, { status: 500 })
+    }
+
+    return NextResponse.json({ data: mapPartner(partner) }, { status: 201 })
   } catch (error) {
     console.error('[PARTNERS_POST]', error)
     return NextResponse.json({ error: 'Gagal membuat mitra' }, { status: 500 })

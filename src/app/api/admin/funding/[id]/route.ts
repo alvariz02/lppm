@@ -1,7 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/db'
 import { fundingSchemeSchema } from '@/lib/validations'
 import { generateSlug } from '@/lib/helpers'
+
+function mapFundingScheme(r: any) {
+  return {
+    id: r.id,
+    name: r.name,
+    slug: r.slug,
+    source: r.source,
+    year: r.year,
+    description: r.description,
+    requirements: r.requirements,
+    minBudget: r.min_budget,
+    maxBudget: r.max_budget,
+    openDate: r.open_date,
+    deadline: r.deadline,
+    status: r.status,
+    guideFileUrl: r.guide_file_url,
+    registrationUrl: r.registration_url,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  }
+}
 
 export async function GET(
   _request: NextRequest,
@@ -9,16 +30,20 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const funding = await db.fundingScheme.findUnique({ where: { id } })
+    const { data: funding, error } = await supabase
+      .from('funding_schemes')
+      .select('*')
+      .eq('id', id)
+      .single()
 
-    if (!funding) {
+    if (error || !funding) {
       return NextResponse.json(
         { error: 'Funding scheme not found' },
         { status: 404 }
       )
     }
 
-    return NextResponse.json({ data: funding })
+    return NextResponse.json({ data: mapFundingScheme(funding) })
   } catch (error) {
     console.error('[API_ADMIN_FUNDING_GET_ID]', error)
     return NextResponse.json(
@@ -37,7 +62,11 @@ export async function PUT(
     const body = await request.json()
     const validated = fundingSchemeSchema.parse(body)
 
-    const existing = await db.fundingScheme.findUnique({ where: { id } })
+    const { data: existing } = await supabase
+      .from('funding_schemes')
+      .select('id')
+      .eq('id', id)
+      .single()
     if (!existing) {
       return NextResponse.json(
         { error: 'Funding scheme not found' },
@@ -46,29 +75,45 @@ export async function PUT(
     }
 
     const slug = generateSlug(validated.name)
-    const slugConflict = await db.fundingScheme.findUnique({ where: { slug } })
-    const finalSlug = slugConflict && slugConflict.id !== id ? `${slug}-${Date.now()}` : slug
+    const { data: slugConflict } = await supabase
+      .from('funding_schemes')
+      .select('id')
+      .eq('slug', slug)
+      .limit(1)
+    const finalSlug = slugConflict && slugConflict.length > 0 && slugConflict[0].id !== id
+      ? `${slug}-${Date.now()}`
+      : slug
 
-    const funding = await db.fundingScheme.update({
-      where: { id },
-      data: {
+    const { data: funding, error } = await supabase
+      .from('funding_schemes')
+      .update({
         name: validated.name,
         slug: finalSlug,
         source: validated.source ?? null,
         year: validated.year,
         description: validated.description ?? null,
         requirements: validated.requirements ?? null,
-        minBudget: validated.minBudget ?? null,
-        maxBudget: validated.maxBudget ?? null,
-        openDate: validated.openDate ? new Date(validated.openDate) : null,
-        deadline: validated.deadline ? new Date(validated.deadline) : null,
+        min_budget: validated.minBudget ?? null,
+        max_budget: validated.maxBudget ?? null,
+        open_date: validated.openDate ? new Date(validated.openDate).toISOString() : null,
+        deadline: validated.deadline ? new Date(validated.deadline).toISOString() : null,
         status: validated.status,
-        guideFileUrl: validated.guideFileUrl ?? null,
-        registrationUrl: validated.registrationUrl ?? null,
-      },
-    })
+        guide_file_url: validated.guideFileUrl ?? null,
+        registration_url: validated.registrationUrl ?? null,
+      })
+      .eq('id', id)
+      .select()
+      .single()
 
-    return NextResponse.json({ success: true, data: funding })
+    if (error) {
+      console.error('[API_ADMIN_FUNDING_PUT]', error)
+      return NextResponse.json(
+        { error: 'Failed to update funding scheme' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true, data: mapFundingScheme(funding) })
   } catch (error: unknown) {
     console.error('[API_ADMIN_FUNDING_PUT]', error)
     if (error && typeof error === 'object' && 'issues' in error) {
@@ -91,7 +136,11 @@ export async function DELETE(
   try {
     const { id } = await params
 
-    const existing = await db.fundingScheme.findUnique({ where: { id } })
+    const { data: existing } = await supabase
+      .from('funding_schemes')
+      .select('id')
+      .eq('id', id)
+      .single()
     if (!existing) {
       return NextResponse.json(
         { error: 'Funding scheme not found' },
@@ -99,7 +148,14 @@ export async function DELETE(
       )
     }
 
-    await db.fundingScheme.delete({ where: { id } })
+    const { error } = await supabase.from('funding_schemes').delete().eq('id', id)
+    if (error) {
+      console.error('[API_ADMIN_FUNDING_DELETE]', error)
+      return NextResponse.json(
+        { error: 'Failed to delete funding scheme' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({ success: true, message: 'Funding scheme deleted' })
   } catch (error) {

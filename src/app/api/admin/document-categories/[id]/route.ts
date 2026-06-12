@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/db'
 import { generateSlug } from '@/lib/helpers'
 
 export async function GET(
@@ -8,16 +8,30 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const category = await db.documentCategory.findUnique({
-      where: { id },
-      include: { _count: { select: { documents: true } } },
-    })
+    const { data, error } = await supabase
+      .from('document_categories')
+      .select('id, name, slug, created_at, updated_at, documents:documents(count)')
+      .eq('id', id)
+      .single()
 
-    if (!category) {
+    if (error || !data) {
       return NextResponse.json({ error: 'Kategori dokumen tidak ditemukan' }, { status: 404 })
     }
 
-    return NextResponse.json({ data: category })
+    const item = data as Record<string, unknown>
+    const docsAgg = item.documents as Array<Record<string, unknown>> | null
+    const docsCount = Array.isArray(docsAgg) && docsAgg.length > 0 ? Number(docsAgg[0].count) : 0
+
+    const mapped = {
+      id: item.id,
+      name: item.name,
+      slug: item.slug,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+      _count: { documents: docsCount },
+    }
+
+    return NextResponse.json({ data: mapped })
   } catch (error) {
     console.error('[DOCUMENT_CATEGORY_GET]', error)
     return NextResponse.json({ error: 'Gagal memuat kategori dokumen' }, { status: 500 })
@@ -37,15 +51,26 @@ export async function PUT(
       return NextResponse.json({ error: 'Nama kategori wajib diisi' }, { status: 400 })
     }
 
-    const existing = await db.documentCategory.findUnique({ where: { id } })
-    if (!existing) {
+    const { data: existing, error: existingError } = await supabase
+      .from('document_categories')
+      .select('id')
+      .eq('id', id)
+      .single()
+
+    if (existingError || !existing) {
       return NextResponse.json({ error: 'Kategori dokumen tidak ditemukan' }, { status: 404 })
     }
 
     const slug = generateSlug(name.trim())
 
     // Check slug uniqueness (exclude self)
-    const slugConflict = await db.documentCategory.findUnique({ where: { slug } })
+    const { data: slugConflict } = await supabase
+      .from('document_categories')
+      .select('id')
+      .eq('slug', slug)
+      .neq('id', id)
+      .single()
+
     if (slugConflict && slugConflict.id !== id) {
       return NextResponse.json(
         { error: 'Kategori dokumen dengan nama tersebut sudah ada' },
@@ -53,13 +78,32 @@ export async function PUT(
       )
     }
 
-    const category = await db.documentCategory.update({
-      where: { id },
-      data: { name: name.trim(), slug },
-      include: { _count: { select: { documents: true } } },
-    })
+    const { data, error } = await supabase
+      .from('document_categories')
+      .update({ name: name.trim(), slug })
+      .eq('id', id)
+      .select('id, name, slug, created_at, updated_at, documents:documents(count)')
+      .single()
 
-    return NextResponse.json({ data: category })
+    if (error) {
+      console.error('[DOCUMENT_CATEGORY_PUT]', error)
+      return NextResponse.json({ error: 'Gagal memperbarui kategori dokumen' }, { status: 500 })
+    }
+
+    const item = data as Record<string, unknown>
+    const docsAgg = item.documents as Array<Record<string, unknown>> | null
+    const docsCount = Array.isArray(docsAgg) && docsAgg.length > 0 ? Number(docsAgg[0].count) : 0
+
+    const mapped = {
+      id: item.id,
+      name: item.name,
+      slug: item.slug,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+      _count: { documents: docsCount },
+    }
+
+    return NextResponse.json({ data: mapped })
   } catch (error) {
     console.error('[DOCUMENT_CATEGORY_PUT]', error)
     return NextResponse.json({ error: 'Gagal memperbarui kategori dokumen' }, { status: 500 })
@@ -73,23 +117,34 @@ export async function DELETE(
   try {
     const { id } = await params
 
-    const existing = await db.documentCategory.findUnique({
-      where: { id },
-      include: { _count: { select: { documents: true } } },
-    })
+    const { data: existing, error: existingError } = await supabase
+      .from('document_categories')
+      .select('id, name, slug, created_at, updated_at, documents:documents(count)')
+      .eq('id', id)
+      .single()
 
-    if (!existing) {
+    if (existingError || !existing) {
       return NextResponse.json({ error: 'Kategori dokumen tidak ditemukan' }, { status: 404 })
     }
 
-    if (existing._count.documents > 0) {
+    // Check if any documents use this category
+    const item = existing as Record<string, unknown>
+    const docsAgg = item.documents as Array<Record<string, unknown>> | null
+    const docsCount = Array.isArray(docsAgg) && docsAgg.length > 0 ? Number(docsAgg[0].count) : 0
+
+    if (docsCount > 0) {
       return NextResponse.json(
         { error: 'Kategori dokumen masih memiliki dokumen terkait. Hapus atau pindahkan dokumen terlebih dahulu.' },
         { status: 400 }
       )
     }
 
-    await db.documentCategory.delete({ where: { id } })
+    const { error } = await supabase.from('document_categories').delete().eq('id', id)
+
+    if (error) {
+      console.error('[DOCUMENT_CATEGORY_DELETE]', error)
+      return NextResponse.json({ error: 'Gagal menghapus kategori dokumen' }, { status: 500 })
+    }
 
     return NextResponse.json({ data: { id } })
   } catch (error) {

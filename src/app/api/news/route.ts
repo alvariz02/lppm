@@ -1,6 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase, paginateQuery } from '@/lib/db'
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants'
+
+function mapNews(n: Record<string, unknown>) {
+  return {
+    id: n.id,
+    categoryId: n.category_id ?? null,
+    title: n.title,
+    slug: n.slug,
+    excerpt: n.excerpt ?? null,
+    content: n.content,
+    imageUrl: n.image_url ?? null,
+    status: n.status,
+    isFeatured: n.is_featured ?? false,
+    seoTitle: n.seo_title ?? null,
+    seoDescription: n.seo_description ?? null,
+    publishedAt: n.published_at ?? null,
+    createdAt: n.created_at,
+    updatedAt: n.updated_at,
+    category: n.category ? { id: (n.category as Record<string, unknown>).id, name: (n.category as Record<string, unknown>).name, slug: (n.category as Record<string, unknown>).slug } : null,
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,39 +34,43 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search')
     const featured = searchParams.get('featured')
 
-    const where: Record<string, unknown> = {
-      status: 'published',
-    }
+    const { from, to } = paginateQuery(page, pageSize)
+
+    let query = supabase
+      .from('news')
+      .select('*, category:news_categories(id, name, slug)', { count: 'exact' })
+      .eq('status', 'published')
+      .range(from, to)
 
     if (categoryId) {
-      where.categoryId = categoryId
+      query = query.eq('category_id', categoryId)
     }
 
     if (featured === 'true') {
-      where.isFeatured = true
+      query = query.eq('is_featured', true)
     }
 
     if (search) {
-      where.title = { contains: search }
+      query = query.or(`title.ilike.%${search}%,excerpt.ilike.%${search}%`)
     }
 
-    const [data, total] = await Promise.all([
-      db.news.findMany({
-        where,
-        include: {
-          category: {
-            select: { id: true, name: true, slug: true },
-          },
-        },
-        orderBy: { publishedAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      db.news.count({ where }),
-    ])
+    query = query.order('published_at', { ascending: false })
+
+    const { data, count, error } = await query
+
+    if (error) {
+      console.error('[API_NEWS_GET]', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch news' },
+        { status: 500 }
+      )
+    }
+
+    const mapped = (data ?? []).map(mapNews)
+    const total = count ?? 0
 
     return NextResponse.json({
-      data,
+      data: mapped,
       total,
       page,
       pageSize,

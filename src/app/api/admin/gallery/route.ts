@@ -1,8 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase, paginateQuery } from '@/lib/db'
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants'
 import { galleryAlbumSchema } from '@/lib/validations'
 import { generateSlug } from '@/lib/helpers'
+
+function mapGalleryAlbum(a: Record<string, unknown>) {
+  return {
+    id: a.id,
+    title: a.title,
+    slug: a.slug,
+    description: a.description ?? null,
+    coverUrl: a.cover_url ?? null,
+    category: a.category ?? null,
+    createdAt: a.created_at,
+    updatedAt: a.updated_at,
+    photoCount: a.photoCount as number | undefined,
+    _count: a._count as { photos: number } | undefined,
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,36 +30,53 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search')
     const category = searchParams.get('category')
 
-    const where: Record<string, unknown> = {}
+    const { from, to } = paginateQuery(page, pageSize)
+
+    let query = supabase
+      .from('gallery_albums')
+      .select('*', { count: 'exact' })
+      .range(from, to)
 
     if (category) {
-      where.category = category
+      query = query.eq('category', category)
     }
-
     if (search) {
-      where.OR = [
-        { title: { contains: search } },
-        { description: { contains: search } },
-      ]
+      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`)
     }
 
-    const [data, total] = await Promise.all([
-      db.galleryAlbum.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        include: {
-          _count: { select: { photos: true } },
-        },
-      }),
-      db.galleryAlbum.count({ where }),
-    ])
+    query = query.order('created_at', { ascending: false })
 
-    const albums = data.map((album) => ({
-      ...album,
-      photoCount: album._count.photos,
+    const { data, count, error } = await query
+
+    if (error) {
+      console.error('[API_ADMIN_GALLERY_GET]', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch gallery albums' },
+        { status: 500 }
+      )
+    }
+
+    // Get photo counts
+    const albumIds = (data ?? []).map((a: any) => a.id)
+    let photoCountMap: Record<string, number> = {}
+    if (albumIds.length > 0) {
+      const { data: photoCounts } = await supabase
+        .from('gallery_photos')
+        .select('album_id')
+        .in('album_id', albumIds)
+      photoCountMap = (photoCounts || []).reduce((acc: Record<string, number>, p: any) => {
+        acc[p.album_id] = (acc[p.album_id] || 0) + 1
+        return acc
+      }, {})
+    }
+
+    const albums = (data ?? []).map((album: any) => ({
+      ...mapGalleryAlbum(album),
+      photoCount: photoCountMap[album.id] || 0,
+      _count: { photos: photoCountMap[album.id] || 0 },
     }))
+
+    const total = count ?? 0
 
     return NextResponse.json({
       data: albums,
@@ -68,20 +100,34 @@ export async function POST(request: NextRequest) {
     const validated = galleryAlbumSchema.parse(body)
 
     const slug = generateSlug(validated.title)
-    const existing = await db.galleryAlbum.findUnique({ where: { slug } })
+    const { data: existing } = await supabase
+      .from('gallery_albums')
+      .select('id')
+      .eq('slug', slug)
+      .single()
     const finalSlug = existing ? `${slug}-${Date.now()}` : slug
 
-    const album = await db.galleryAlbum.create({
-      data: {
+    const { data: album, error } = await supabase
+      .from('gallery_albums')
+      .insert({
         title: validated.title,
         slug: finalSlug,
         description: validated.description ?? null,
-        coverUrl: validated.coverUrl ?? null,
+        cover_url: validated.coverUrl ?? null,
         category: validated.category ?? null,
-      },
-    })
+      })
+      .select()
+      .single()
 
-    return NextResponse.json({ success: true, data: album }, { status: 201 })
+    if (error) {
+      console.error('[API_ADMIN_GALLERY_POST]', error)
+      return NextResponse.json(
+        { error: 'Failed to create gallery album' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true, data: mapGalleryAlbum({ ...album, photoCount: 0, _count: { photos: 0 } }) }, { status: 201 })
   } catch (error: unknown) {
     console.error('[API_ADMIN_GALLERY_POST]', error)
     if (error && typeof error === 'object' && 'issues' in error) {

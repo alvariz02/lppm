@@ -1,7 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/db'
 import { galleryAlbumSchema } from '@/lib/validations'
 import { generateSlug } from '@/lib/helpers'
+
+function mapGalleryAlbum(a: Record<string, unknown>) {
+  return {
+    id: a.id,
+    title: a.title,
+    slug: a.slug,
+    description: a.description ?? null,
+    coverUrl: a.cover_url ?? null,
+    category: a.category ?? null,
+    createdAt: a.created_at,
+    updatedAt: a.updated_at,
+    photos: a.photos ? (a.photos as Record<string, unknown>[]).map(mapGalleryPhoto) : [],
+  }
+}
+
+function mapGalleryPhoto(p: Record<string, unknown>) {
+  return {
+    id: p.id,
+    albumId: p.album_id ?? null,
+    imageUrl: p.image_url,
+    caption: p.caption ?? null,
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+  }
+}
 
 export async function GET(
   _request: NextRequest,
@@ -9,19 +34,26 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const album = await db.galleryAlbum.findUnique({
-      where: { id },
-      include: { photos: { orderBy: { createdAt: 'desc' } } },
-    })
 
-    if (!album) {
+    const { data: album, error } = await supabase
+      .from('gallery_albums')
+      .select('*, photos:gallery_photos(*)')
+      .eq('id', id)
+      .single()
+
+    if (error || !album) {
       return NextResponse.json(
         { error: 'Album not found' },
         { status: 404 }
       )
     }
 
-    return NextResponse.json({ data: album })
+    // Sort photos by created_at desc
+    const sortedPhotos = (album.photos || []).sort((a: any, b: any) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+
+    return NextResponse.json({ data: mapGalleryAlbum({ ...album, photos: sortedPhotos }) })
   } catch (error) {
     console.error('[API_ADMIN_GALLERY_GET_ID]', error)
     return NextResponse.json(
@@ -40,7 +72,12 @@ export async function PUT(
     const body = await request.json()
     const validated = galleryAlbumSchema.parse(body)
 
-    const existing = await db.galleryAlbum.findUnique({ where: { id } })
+    const { data: existing } = await supabase
+      .from('gallery_albums')
+      .select('id')
+      .eq('id', id)
+      .single()
+
     if (!existing) {
       return NextResponse.json(
         { error: 'Album not found' },
@@ -49,21 +86,35 @@ export async function PUT(
     }
 
     const slug = generateSlug(validated.title)
-    const slugConflict = await db.galleryAlbum.findUnique({ where: { slug } })
+    const { data: slugConflict } = await supabase
+      .from('gallery_albums')
+      .select('id')
+      .eq('slug', slug)
+      .single()
     const finalSlug = slugConflict && slugConflict.id !== id ? `${slug}-${Date.now()}` : slug
 
-    const album = await db.galleryAlbum.update({
-      where: { id },
-      data: {
+    const { data: album, error } = await supabase
+      .from('gallery_albums')
+      .update({
         title: validated.title,
         slug: finalSlug,
         description: validated.description ?? null,
-        coverUrl: validated.coverUrl ?? null,
+        cover_url: validated.coverUrl ?? null,
         category: validated.category ?? null,
-      },
-    })
+      })
+      .eq('id', id)
+      .select()
+      .single()
 
-    return NextResponse.json({ success: true, data: album })
+    if (error) {
+      console.error('[API_ADMIN_GALLERY_PUT]', error)
+      return NextResponse.json(
+        { error: 'Failed to update album' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true, data: mapGalleryAlbum({ ...album, photos: [] }) })
   } catch (error: unknown) {
     console.error('[API_ADMIN_GALLERY_PUT]', error)
     if (error && typeof error === 'object' && 'issues' in error) {
@@ -86,7 +137,12 @@ export async function DELETE(
   try {
     const { id } = await params
 
-    const existing = await db.galleryAlbum.findUnique({ where: { id } })
+    const { data: existing } = await supabase
+      .from('gallery_albums')
+      .select('id')
+      .eq('id', id)
+      .single()
+
     if (!existing) {
       return NextResponse.json(
         { error: 'Album not found' },
@@ -94,7 +150,15 @@ export async function DELETE(
       )
     }
 
-    await db.galleryAlbum.delete({ where: { id } })
+    const { error } = await supabase.from('gallery_albums').delete().eq('id', id)
+
+    if (error) {
+      console.error('[API_ADMIN_GALLERY_DELETE]', error)
+      return NextResponse.json(
+        { error: 'Failed to delete album' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({ success: true, message: 'Album deleted' })
   } catch (error) {

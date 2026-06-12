@@ -1656,3 +1656,304 @@ Now all 19 paginated admin routes use the same consistent pattern for page/pageS
 - `/api/auth/login` sets both `lppm_auth` and `lppm_role` cookies (verified via curl -c)
 - All admin routes return proper paginated response format `{ data, total, page, pageSize, totalPages }`
 - Dev server compiles successfully
+
+---
+
+## Task 3-a: Rewrite API Routes from Prisma to Supabase
+
+**Date:** 2026-03-05
+**Agent:** API Migration Agent
+
+### Objective
+Rewrite 9 API route files to use Supabase instead of Prisma, while maintaining the same API response format (camelCase) for frontend compatibility.
+
+### Files Modified
+
+1. **`/src/app/api/auth/login/route.ts`**
+   - Replaced `db.profile.findUnique({ where: { email } })` with `supabase.from('profiles').select('*').eq('email', email).single()`
+   - Added `mapProfile()` helper to convert snake_case → camelCase in response
+
+2. **`/src/app/api/auth/logout/route.ts`**
+   - No DB usage — only clears cookies. Added comment noting no changes needed.
+
+3. **`/src/app/api/site-settings/route.ts`**
+   - Replaced `db.siteSetting.findFirst()` with `supabase.from('site_settings').select('*').limit(1).single()`
+   - Added `mapSiteSetting()` helper for camelCase response mapping
+
+4. **`/src/app/api/lppm-profile/route.ts`**
+   - Replaced `db.lppmProfile.findFirst()` with `supabase.from('lppm_profiles').select('*').limit(1).single()`
+   - Added `mapLppmProfile()` helper for camelCase response mapping
+
+5. **`/src/app/api/admin/settings/route.ts`**
+   - GET: Replaced `db.siteSetting.findFirst()` with Supabase query
+   - PUT: Implemented upsert pattern — check if record exists, then `update` or `insert`
+   - All insert/update data uses snake_case column names
+   - Maps response back to camelCase via `mapSiteSetting()`
+
+6. **`/src/app/api/admin/lppm-profile/route.ts`**
+   - GET: Replaced `db.lppmProfile.findFirst()` with Supabase query
+   - PUT: Implemented upsert pattern for lppm_profiles table
+   - Maps camelCase validation input to snake_case for Supabase insert/update
+   - Maps response back to camelCase via `mapLppmProfile()`
+
+7. **`/src/app/api/admin/users/route.ts`**
+   - GET: Replaced `db.profile.findMany()` with paginated Supabase query using `paginateQuery()` and `buildOrSearch()` helpers
+   - POST: Replaced `db.profile.create()` with `supabase.from('profiles').insert().select().single()`
+   - Email uniqueness check uses Supabase `.select('id').eq('email', ...).single()`
+   - All data uses snake_case for Supabase, maps back to camelCase in response
+
+8. **`/src/app/api/admin/users/[id]/route.ts`**
+   - GET: Replaced `db.profile.findUnique({ where: { id } })` with `supabase.from('profiles').select('*').eq('id', id).single()`
+   - PUT: Replaced `db.profile.update()` with Supabase update query; email uniqueness check also migrated
+   - DELETE: Replaced `db.profile.delete()` with `supabase.from('profiles').delete().eq('id', id)`
+
+9. **`/src/app/api/stats/route.ts`**
+   - Replaced all `db.*.count()` calls with `countRecords()` helper
+   - Replaced `db.publication.groupBy()` with `supabase.from('publications').select('publication_type')` + client-side reduce
+   - Replaced `db.fundingScheme.groupBy()` with `supabase.from('funding_schemes').select('status')` + client-side reduce
+   - Replaced `db.*.findMany()` for recent items with Supabase select + order + limit
+   - All recent items map `created_at` → `createdAt` for frontend compatibility
+
+### Key Patterns Applied
+
+| Prisma Pattern | Supabase Equivalent |
+|---|---|
+| `db.profile.findUnique({ where: { email } })` | `supabase.from('profiles').select('*').eq('email', email).single()` |
+| `db.siteSetting.findFirst()` | `supabase.from('site_settings').select('*').limit(1).single()` |
+| `db.profile.findMany({ where, orderBy, skip, take })` | `supabase.from('profiles').select('*', { count: 'exact' }).range(from, to).order(...)` |
+| `db.profile.create({ data })` | `supabase.from('profiles').insert(snakeCaseData).select().single()` |
+| `db.profile.update({ where: { id }, data })` | `supabase.from('profiles').update(snakeCaseData).eq('id', id).select().single()` |
+| `db.profile.delete({ where: { id } })` | `supabase.from('profiles').delete().eq('id', id)` |
+| `db.*.count({ where })` | `countRecords('table', { filter_key: value })` |
+| `db.*.groupBy({ by, _count })` | `supabase.from('table').select('column')` + client-side reduce |
+
+### Column Name Mappings (camelCase → snake_case)
+
+- `fullName` → `full_name`, `avatarUrl` → `avatar_url`, `isActive` → `is_active`
+- `createdAt` → `created_at`, `updatedAt` → `updated_at`
+- `siteName` → `site_name`, `lppmName` → `lppm_name`, `logoUrl` → `logo_url`
+- `lppmLogoUrl` → `lppm_logo_url`, `faviconUrl` → `favicon_url`
+- `googleMapsUrl` → `google_maps_url`, `facebookUrl` → `facebook_url`
+- `instagramUrl` → `instagram_url`, `youtubeUrl` → `youtube_url`
+- `seoTitle` → `seo_title`, `seoDescription` → `seo_description`
+- `chairmanName` → `chairman_name`, `chairmanPhotoUrl` → `chairman_photo_url`
+- `chairmanMessage` → `chairman_message`, `structureImageUrl` → `structure_image_url`
+- `activityLogs` → `activity_logs`
+
+### Response Format
+All API responses maintain camelCase field names for frontend compatibility by using mapping functions (`mapProfile`, `mapSiteSetting`, `mapLppmProfile`) that convert snake_case Supabase results back to camelCase.
+
+### Lint Status
+- 0 new errors from the rewritten files
+- Pre-existing warnings (React Hook Form compatibility) remain unchanged
+
+---
+
+## Task 3-b: Rewrite API Routes from Prisma to Supabase
+
+**Date:** 2026-03-05
+**Task ID:** 3-b
+
+### Summary
+Rewrote 15 API route files from Prisma ORM to Supabase JS client, maintaining identical API response formats while mapping snake_case database columns to camelCase in responses.
+
+### Files Modified (15 total)
+
+#### News API Routes
+1. `/home/z/my-project/src/app/api/news/route.ts` — Public news list with pagination, search, category filter, featured filter
+2. `/home/z/my-project/src/app/api/news/[slug]/route.ts` — Public news detail by slug (published only)
+3. `/home/z/my-project/src/app/api/admin/news/route.ts` — Admin news list + create (with slug generation)
+4. `/home/z/my-project/src/app/api/admin/news/[id]/route.ts` — Admin news GET/PUT/DELETE by ID
+
+#### News Categories API Routes
+5. `/home/z/my-project/src/app/api/admin/news-categories/route.ts` — Admin news categories list + create
+6. `/home/z/my-project/src/app/api/admin/news-categories/[id]/route.ts` — Admin news categories GET/PUT/DELETE (with _count.news check)
+
+#### Announcement API Routes
+7. `/home/z/my-project/src/app/api/announcement/route.ts` — Public announcements list (active only)
+8. `/home/z/my-project/src/app/api/announcement/[slug]/route.ts` — Public announcement detail by slug (active only)
+9. `/home/z/my-project/src/app/api/admin/announcements/route.ts` — Admin announcements list + create
+10. `/home/z/my-project/src/app/api/admin/announcements/[id]/route.ts` — Admin announcements GET/PUT/DELETE by ID
+
+#### Document API Routes
+11. `/home/z/my-project/src/app/api/document/route.ts` — Public documents list + PATCH for download count increment
+12. `/home/z/my-project/src/app/api/admin/documents/route.ts` — Admin documents list + create
+13. `/home/z/my-project/src/app/api/admin/documents/[id]/route.ts` — Admin documents GET/PUT/DELETE by ID
+
+#### Document Categories API Routes
+14. `/home/z/my-project/src/app/api/admin/document-categories/route.ts` — Admin document categories list + create
+15. `/home/z/my-project/src/app/api/admin/document-categories/[id]/route.ts` — Admin document categories GET/PUT/DELETE (with _count.documents check)
+
+### Key Changes
+
+#### Import Change
+- **Old:** `import { db } from '@/lib/db'` (Prisma)
+- **New:** `import { supabase, paginateQuery } from '@/lib/db'` (Supabase)
+
+#### Column Mapping (snake_case ↔ camelCase)
+Each file includes a `mapXxx()` function that converts snake_case DB columns to camelCase for API responses:
+
+| camelCase (API) | snake_case (DB) |
+|---|---|
+| categoryId | category_id |
+| imageUrl | image_url |
+| isFeatured | is_featured |
+| seoTitle | seo_title |
+| seoDescription | seo_description |
+| publishedAt | published_at |
+| expiredAt | expired_at |
+| attachmentUrl | attachment_url |
+| fileUrl | file_url |
+| fileType | file_type |
+| fileSize | file_size |
+| downloadCount | download_count |
+| isActive | is_active |
+| createdAt | created_at |
+| updatedAt | updated_at |
+
+#### Query Pattern Changes
+- **Pagination:** `db.xxx.findMany({ skip, take })` → `supabase.from('xxx').select(...).range(from, to)`
+- **Count:** `db.xxx.count({ where })` → `supabase.from('xxx').select(..., { count: 'exact' })`
+- **Search:** `where.OR = [{ title: { contains: search } }]` → `.or('title.ilike.%search%')`
+- **Includes/Joins:** `include: { category: ... }` → `.select('*, category:news_categories(id, name)')`
+- **Create:** `db.xxx.create({ data: {...} })` → `supabase.from('xxx').insert({...}).select().single()`
+- **Update:** `db.xxx.update({ where: { id }, data: {...} })` → `supabase.from('xxx').update({...}).eq('id', id).select().single()`
+- **Delete:** `db.xxx.delete({ where: { id } })` → `supabase.from('xxx').delete().eq('id', id)`
+- **FindUnique:** `db.xxx.findUnique({ where: { slug } })` → `supabase.from('xxx').select(...).eq('slug', slug).single()`
+- **_count aggregation:** `include: { _count: { select: { news: true } } }` → `.select('..., news:news(count)')` with array extraction
+- **Download count increment:** `db.document.update({ data: { downloadCount: { increment: 1 } } })` → manual fetch + increment + update
+
+#### Table Names
+| Prisma Model | Supabase Table |
+|---|---|
+| News | news |
+| NewsCategory | news_categories |
+| Announcement | announcements |
+| Document | documents |
+| DocumentCategory | document_categories |
+
+### Validation & Helpers Preserved
+- All Zod validation schemas (`newsSchema`, `announcementSchema`, `documentSchema`) from `@/lib/validations` kept unchanged
+- `generateSlug` from `@/lib/helpers` kept unchanged
+- `DEFAULT_PAGE_SIZE` from `@/lib/constants` kept unchanged
+
+### Lint Status
+- 0 new errors or warnings from the rewritten files
+- Pre-existing lint error in `useAuth.ts` (set-state-in-effect) and warnings in admin pages (React Hook Form compatibility) remain unchanged
+
+---
+Task ID: 3-c
+Agent: full-stack-developer
+Task: Rewrite research/community-service/funding/publication API routes from Prisma to Supabase
+
+Work Log:
+- Read all 16 existing API route files to understand current Prisma query patterns
+- Read lib/db.ts, lib/supabase.ts, lib/validations.ts, lib/helpers.ts, lib/constants.ts for context
+- Rewrote `/api/research/route.ts` - paginated list with members join, public only (is_published=true)
+- Rewrote `/api/research/[slug]/route.ts` - detail with nested relations (leader, fundingScheme, faculty, studyProgram, members, studentMembers, publications) using separate Supabase queries
+- Rewrote `/api/admin/research/route.ts` - admin paginated list + POST create with slug uniqueness check
+- Rewrote `/api/admin/research/[id]/route.ts` - GET by ID with full relations, PUT with slug conflict check (neq id), DELETE
+- Rewrote `/api/community-service/route.ts` - paginated list with members join, public only
+- Rewrote `/api/community-service/[slug]/route.ts` - detail with nested relations, service_id FK for members
+- Rewrote `/api/admin/community-service/route.ts` - admin list + POST create
+- Rewrote `/api/admin/community-service/[id]/route.ts` - GET/PUT/DELETE with full relations
+- Rewrote `/api/funding-scheme/route.ts` - list with status in ['active','closed'] default filter
+- Rewrote `/api/funding-scheme/[slug]/route.ts` - detail with separate research/community_services queries
+- Rewrote `/api/admin/funding/route.ts` - admin paginated list + POST create with auto-slug
+- Rewrote `/api/admin/funding/[id]/route.ts` - GET/PUT/DELETE with slug conflict resolution
+- Rewrote `/api/publication/route.ts` - paginated list with publication_authors join
+- Rewrote `/api/publication/[slug]/route.ts` - detail with authors and related research/service
+- Rewrote `/api/admin/publications/route.ts` - admin list + POST create
+- Rewrote `/api/admin/publications/[id]/route.ts` - GET/PUT/DELETE with slug conflict resolution
+- Verified all files pass lint (only pre-existing warnings/errors remain, none from rewritten files)
+
+Stage Summary:
+- All 16 API route files successfully rewritten from Prisma to Supabase
+- Replaced `import { db } from '@/lib/db'` with `import { supabase, paginateQuery } from '@/lib/db'`
+- All Supabase queries use snake_case column names and plural snake_case table names
+- All API responses map snake_case back to camelCase to maintain existing API contract
+- Deep nested relations (members, studentMembers, publications, proposalReviews) use separate queries since Supabase doesn't support deep nesting in a single query
+- Slug uniqueness checks use `.neq('id', id)` pattern for updates and `.limit(1)` for creates
+- Date fields use `.toISOString()` when inserting/updating
+- Validation schemas and generateSlug helper preserved unchanged
+
+---
+
+## Task 3-d: Rewrite API Routes from Prisma to Supabase
+
+**Date:** 2026-03-05
+**Task ID:** 3-d
+
+### Summary
+Rewrote ALL 25 remaining API route files that used Prisma (`db` from `@/lib/db`) to use Supabase (`supabase` from `@/lib/db`). Also confirmed `/home/z/my-project/src/app/api/route.ts` does not use Prisma.
+
+### Files Modified (25 total)
+
+#### Reviewer Routes (3 files)
+1. `src/app/api/reviewer/route.ts` - Public GET (active reviewers with researcher join)
+2. `src/app/api/admin/reviewers/route.ts` - Admin GET (paginated, search, filters) + POST
+3. `src/app/api/admin/reviewers/[id]/route.ts` - GET/PUT/DELETE with proposal reviews join
+
+#### Researcher Routes (2 files)
+4. `src/app/api/admin/researchers/route.ts` - Admin GET (paginated, faculty/study_program joins) + POST
+5. `src/app/api/admin/researchers/[id]/route.ts` - GET/PUT/DELETE with _count aggregation
+
+#### Faculty Routes (2 files)
+6. `src/app/api/admin/faculties/route.ts` - Admin GET (with _count.studyPrograms) + POST
+7. `src/app/api/admin/faculties/[id]/route.ts` - GET/PUT/DELETE with study programs + _count
+
+#### Study Program Routes (2 files)
+8. `src/app/api/admin/study-programs/route.ts` - Admin GET (faculty join) + POST
+9. `src/app/api/admin/study-programs/[id]/route.ts` - GET/PUT/DELETE with _count
+
+#### Partner Routes (3 files)
+10. `src/app/api/partner/route.ts` - Public GET (active partners)
+11. `src/app/api/admin/partners/route.ts` - Admin GET (paginated, search) + POST
+12. `src/app/api/admin/partners/[id]/route.ts` - GET/PUT/DELETE
+
+#### Agenda Routes (3 files)
+13. `src/app/api/agenda/route.ts` - Public GET (by status/event_type)
+14. `src/app/api/admin/agenda/route.ts` - Admin GET (paginated, search) + POST
+15. `src/app/api/admin/agenda/[id]/route.ts` - GET/PUT/DELETE
+
+#### Gallery Routes (5 files)
+16. `src/app/api/gallery/route.ts` - Public GET (albums with photos)
+17. `src/app/api/admin/gallery/route.ts` - Admin GET (with photo count) + POST
+18. `src/app/api/admin/gallery/[id]/route.ts` - GET/PUT/DELETE (with photos)
+19. `src/app/api/admin/gallery/[id]/photos/route.ts` - GET (photos list) + POST (add photo)
+20. `src/app/api/admin/gallery/[id]/photos/[photoId]/route.ts` - PUT/DELETE photo
+
+#### Contact/Message Routes (3 files)
+21. `src/app/api/contact/route.ts` - Public POST (submit contact message)
+22. `src/app/api/admin/messages/route.ts` - Admin GET (with unread count) 
+23. `src/app/api/admin/messages/[id]/route.ts` - GET/PUT/DELETE
+
+#### Review Routes (2 files)
+24. `src/app/api/admin/reviews/route.ts` - Admin GET (with reviewer/research/service joins) + POST
+25. `src/app/api/admin/reviews/[id]/route.ts` - GET/PUT/DELETE
+
+### Key Patterns Applied
+
+1. **Import change**: `import { db } from '@/lib/db'` → `import { supabase, paginateQuery } from '@/lib/db'`
+
+2. **Table names**: All snake_case, plural (e.g., `reviewers`, `researchers`, `faculties`, `study_programs`, `partners`, `agenda` (singular!), `gallery_albums`, `gallery_photos`, `contact_messages`, `proposal_reviews`)
+
+3. **Column names**: All snake_case in queries (e.g., `researcher_id`, `reviewer_type`, `is_active`, `contact_person`, `cooperation_type`, `start_date`, `end_date`, `event_type`, `poster_url`, `cover_url`, `image_url`, `is_read`, `proposal_type`, `review_file_url`, `reviewed_at`)
+
+4. **Mapper functions**: Each file defines `mapXxx()` functions to convert snake_case Supabase results back to camelCase API responses, maintaining backward compatibility with the frontend.
+
+5. **Pagination**: Uses `paginateQuery(page, pageSize)` → `.range(from, to)` with `{ count: 'exact' }` on select.
+
+6. **_count patterns**: Implemented via separate Supabase queries + client-side aggregation (e.g., faculty study program counts, gallery photo counts, researcher _counts, reviewer proposal review counts).
+
+7. **Joins**: Uses Supabase's `select('*, relation:table(*)')` syntax for foreign key relations. For deeper joins (proposal reviews → research/service), fetches related data in separate queries.
+
+8. **Existence checks**: Uses `.select('id').eq('id', id).single()` instead of Prisma's `findUnique`.
+
+9. **Slug uniqueness**: Uses `.select('id').eq('slug', slug).single()` with optional `.neq('id', id)` for self-exclusion.
+
+10. **Search**: Uses `.or()` with `ilike` patterns for multi-field search (e.g., `query.or('name.ilike.%search%,email.ilike.%search%')`).
+
+### Verification
+- ESLint: No new errors introduced (1 pre-existing error in `useAuth.ts`, 13 pre-existing warnings)
+- All API response formats preserved (camelCase) via mapper functions
