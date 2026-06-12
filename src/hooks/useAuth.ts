@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 
 export interface AuthUser {
   id: string
@@ -29,8 +29,17 @@ function getStoredUser(): AuthUser | null {
 }
 
 export function useAuth() {
-  const [user, setUser] = useState<AuthUser | null>(() => getStoredUser())
-  const [loading] = useState(() => typeof window === 'undefined')
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  // Read from localStorage after mount to avoid hydration mismatch
+  useEffect(() => {
+    const stored = getStoredUser()
+    if (stored) {
+      setUser(stored)
+    }
+    setLoading(false)
+  }, [])
 
   const login = useCallback((userData: AuthUser) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(userData))

@@ -59,7 +59,8 @@ export default function LoginPage() {
 
       login(data.data)
       toast.success('Login berhasil!')
-      router.push('/admin')
+      // Use hard redirect to ensure cookie is picked up by middleware
+      window.location.href = '/admin'
     } catch {
       toast.error('Terjadi kesalahan jaringan')
     } finally {
