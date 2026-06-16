@@ -32,11 +32,20 @@ export async function GET() {
       .limit(1)
       .single()
 
-    if (error || !data) {
+    // PGRST116 is supabase-js error code for no rows with .single()
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Site settings not found' }, { status: 404 })
+      }
+      console.error('[API_SITE_SETTINGS_GET] Supabase error:', error)
       return NextResponse.json(
-        { error: 'Site settings not found' },
-        { status: 404 }
+        { error: 'Failed to fetch site settings' },
+        { status: 500 }
       )
+    }
+
+    if (!data) {
+      return NextResponse.json({ error: 'Site settings not found' }, { status: 404 })
     }
 
     return NextResponse.json({ data: mapSiteSetting(data) })

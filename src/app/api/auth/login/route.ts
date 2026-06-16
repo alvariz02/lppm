@@ -5,6 +5,7 @@ function mapProfile(p: any) {
   return {
     id: p.id,
     email: p.email,
+    // password field name is `password` in schema.sql
     password: p.password,
     fullName: p.full_name,
     avatarUrl: p.avatar_url,

@@ -27,11 +27,20 @@ export async function GET() {
       .limit(1)
       .single()
 
-    if (error || !data) {
+    // PGRST116 is supabase-js error code for no rows with .single()
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: 'LPPM profile not found' }, { status: 404 })
+      }
+      console.error('[API_LPPM_PROFILE_GET] Supabase error:', error)
       return NextResponse.json(
-        { error: 'LPPM profile not found' },
-        { status: 404 }
+        { error: 'Failed to fetch LPPM profile' },
+        { status: 500 }
       )
+    }
+
+    if (!data) {
+      return NextResponse.json({ error: 'LPPM profile not found' }, { status: 404 })
     }
 
     return NextResponse.json({ data: mapLppmProfile(data) })

@@ -6,12 +6,24 @@ export async function GET() {
     const currentYear = new Date().getFullYear()
     const last5Years = Array.from({ length: 5 }, (_, i) => currentYear - 4 + i)
 
-    // Count queries in parallel
+    // Count queries (still parallel, but remove the expensive per-year loops below)
     const [
-      totalResearch, totalCommunityService, totalPublication, totalResearcher,
-      totalPartner, totalFundingScheme, ongoingResearch, completedResearch,
-      ongoingService, completedService, totalActiveHibah,
-      totalNews, totalAnnouncement, totalDocument, unreadMessages, pendingReviews,
+      totalResearch,
+      totalCommunityService,
+      totalPublication,
+      totalResearcher,
+      totalPartner,
+      totalFundingScheme,
+      ongoingResearch,
+      completedResearch,
+      ongoingService,
+      completedService,
+      totalActiveHibah,
+      totalNews,
+      totalAnnouncement,
+      totalDocument,
+      unreadMessages,
+      pendingReviews,
     ] = await Promise.all([
       countRecords('research', { is_published: true }),
       countRecords('community_services', { is_published: true }),
@@ -31,24 +43,30 @@ export async function GET() {
       countRecords('proposal_reviews', { status: 'waiting' }),
     ])
 
-    // Research per year
+    // Per-year aggregation.
+    // NOTE: Supabase client `.group()` may not be available, so we fallback to per-year counts.
     const researchPerYear = await Promise.all(
-      last5Years.map(async (year) => {
-        const count = await countRecords('research', { year, is_published: true })
-        return { year, count }
-      })
+      last5Years.map(async (year) => ({
+        year,
+        count: await countRecords('research', { year, is_published: true }),
+      }))
     )
 
-    // Community service per year
     const servicePerYear = await Promise.all(
-      last5Years.map(async (year) => {
-        const count = await countRecords('community_services', { year, is_published: true })
-        return { year, count }
-      })
+      last5Years.map(async (year) => ({
+        year,
+        count: await countRecords('community_services', { year, is_published: true }),
+      }))
     )
 
-    // Publications by type
-    const { data: pubTypeData } = await supabase.from('publications').select('publication_type')
+    // Publications by type (without `.group()` to avoid runtime incompatibilities)
+    const { data: pubTypeData, error: pubTypeErr } = await supabase
+      .from('publications')
+      .select('publication_type')
+      .eq('is_published', true)
+
+    if (pubTypeErr) console.error('[API_STATS_GET] pubTypeErr:', pubTypeErr)
+
     const publicationsByType = (pubTypeData || []).reduce((acc: any[], item: any) => {
       const existing = acc.find(a => a.type === item.publication_type)
       if (existing) existing.count++
@@ -56,14 +74,21 @@ export async function GET() {
       return acc
     }, [])
 
-    // Funding by status
-    const { data: fundStatusData } = await supabase.from('funding_schemes').select('status')
+    // Funding by status (without `.group()` to avoid runtime incompatibilities)
+    const { data: fundStatusData, error: fundStatusErr } = await supabase
+      .from('funding_schemes')
+      .select('status')
+
+    if (fundStatusErr) console.error('[API_STATS_GET] fundStatusErr:', fundStatusErr)
+
     const fundingByStatus = (fundStatusData || []).reduce((acc: any[], item: any) => {
       const existing = acc.find(a => a.status === item.status)
       if (existing) existing.count++
       else acc.push({ status: item.status, count: 1 })
       return acc
     }, [])
+
+
 
     // Recent data
     const { data: recentResearch } = await supabase.from('research').select('id, title, status, year, created_at').order('created_at', { ascending: false }).limit(5)
