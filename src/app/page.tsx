@@ -350,41 +350,64 @@ function CardGridSkeleton({ count = 3 }: { count?: number }) {
 // ============ SECTION COMPONENTS ============
 
 function HeroSection() {
-  return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-secondary min-h-[520px] lg:min-h-[600px] flex items-center">
-      {/* Decorative geometric shapes */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-20 -right-20 size-96 rounded-full bg-secondary/20 blur-3xl" />
-        <div className="absolute top-1/2 -left-32 size-80 rounded-full bg-accent/10 blur-3xl" />
-        <div className="absolute -bottom-20 right-1/4 size-64 rounded-full bg-secondary/15 blur-2xl" />
-        {/* Grid pattern */}
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)',
-            backgroundSize: '60px 60px',
-          }}
-        />
-        {/* Floating geometric elements */}
-        <motion.div
-          animate={{ y: [-10, 10, -10], rotate: [0, 5, 0] }}
-          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute top-20 right-[15%] size-16 border-2 border-white/10 rounded-lg rotate-12"
-        />
-        <motion.div
-          animate={{ y: [10, -10, 10], rotate: [0, -8, 0] }}
-          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute bottom-32 left-[10%] size-12 border-2 border-white/10 rounded-full"
-        />
-        <motion.div
-          animate={{ y: [-5, 15, -5], rotate: [0, 10, 0] }}
-          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute top-1/3 left-[25%] size-8 bg-accent/10 rounded-md rotate-45"
-        />
-      </div>
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['hero'],
+    queryFn: async () => {
+      const res = await fetch('/api/stats')
+      if (!res.ok) throw new Error('Failed to fetch hero data')
+      const json = await res.json()
+      return json
+    },
+  })
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 lg:py-24 w-full">
+  const activeResearch = data?.ongoingResearch ?? 0
+  const totalResearch = data?.totalResearch ?? 0
+  const totalService = data?.totalCommunityService ?? 0
+  const totalPublications = data?.totalPublication ?? 0
+
+  const progressResearch = data?.ongoingResearch
+    ? Math.round((data.ongoingResearch / Math.max(1, data.totalResearch)) * 100)
+    : 0
+
+
+  return (
+    <section className="relative flex min-h-[380px] items-center overflow-hidden bg-sky-950 lg:min-h-[430px]">
+
+      {/* Background gradient */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.38),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.25),transparent_35%)]" />
+
+      {/* Soft overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-sky-500/35 via-sky-950/75 to-sky-950" />
+
+      {/* Grid pattern */}
+      <div
+        className="absolute inset-0 opacity-[0.06]"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.18) 1px, transparent 1px)',
+          backgroundSize: '56px 56px',
+        }}
+      />
+
+      {/* Decorative blur */}
+      <div className="absolute -right-32 top-10 h-96 w-96 rounded-full bg-sky-500/20 blur-3xl" />
+      <div className="absolute -left-32 bottom-0 h-96 w-96 rounded-full bg-sky-400/20 blur-3xl" />
+
+      {/* Floating shapes */}
+      <motion.div
+        animate={{ y: [-12, 12, -12], rotate: [0, 8, 0] }}
+        transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute right-[12%] top-24 hidden h-20 w-20 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md lg:block"
+      />
+
+      <motion.div
+        animate={{ y: [10, -10, 10], rotate: [0, -10, 0] }}
+        transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute bottom-28 left-[7%] hidden h-14 w-14 rounded-full border border-accent/30 bg-accent/10 backdrop-blur-md lg:block"
+      />
+
+      <div className="relative mx-auto grid w-full max-w-7xl items-center gap-12 px-4 py-12 sm:px-6 lg:grid-cols-2 lg:px-8 lg:py-20">
+        {/* Left Content */}
         <motion.div
           initial="hidden"
           animate="visible"
@@ -392,63 +415,159 @@ function HeroSection() {
           className="max-w-3xl"
         >
           <motion.div variants={staggerItem}>
-            <Badge className="mb-6 bg-accent/20 text-accent-foreground border-accent/30 hover:bg-accent/30 text-sm px-4 py-1.5 font-medium backdrop-blur-sm">
-              🏛️ LPPM Kampus
+            <Badge className="mb-6 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-black/10 backdrop-blur-md hover:bg-white/15">
+              🏛️ LPPM Universitas Pasifik Morotai
             </Badge>
           </motion.div>
 
           <motion.h1
             variants={staggerItem}
-            className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight tracking-tight"
+            className="text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl"
           >
-            Lembaga Penelitian dan{' '}
-            <span className="text-accent">Pengabdian</span> kepada Masyarakat
+            Pusat Inovasi{' '}
+            <span className="bg-gradient-to-r from-accent to-yellow-200 bg-clip-text text-transparent">
+              Penelitian
+            </span>{' '}
+            dan Pengabdian Masyarakat
           </motion.h1>
 
           <motion.p
             variants={staggerItem}
-            className="mt-6 text-lg lg:text-xl text-white/80 max-w-2xl leading-relaxed"
+            className="mt-6 max-w-2xl text-base leading-relaxed text-white/75 sm:text-lg lg:text-xl"
           >
-            Mendorong inovasi riset dan pengabdian untuk kemajuan bangsa
+            Mendorong riset, publikasi ilmiah, kolaborasi, dan pengabdian
+            kepada masyarakat untuk membangun kampus yang unggul, inovatif,
+            dan berdampak bagi daerah.
           </motion.p>
 
           <motion.div
             variants={staggerItem}
-            className="mt-8 flex flex-wrap gap-3"
+            className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap"
           >
             <Button
               asChild
               size="lg"
-              className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/25 font-semibold"
+              className="h-12 rounded-full bg-accent px-6 font-bold text-accent-foreground shadow-xl shadow-accent/20 hover:bg-accent/90"
             >
               <Link href="/penelitian">
-                <FlaskConical className="size-4" />
+                <FlaskConical className="mr-2 size-5" />
                 Lihat Penelitian
               </Link>
             </Button>
+
             <Button
               asChild
               size="lg"
               variant="outline"
-              className="border-white/30 text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm font-semibold"
+              className="h-12 rounded-full border-white/20 bg-white/10 px-6 font-bold text-white backdrop-blur-md hover:bg-white/20 hover:text-white"
             >
               <Link href="/pengabdian">
-                <HeartHandshake className="size-4" />
-                Lihat Pengabdian
+                <HeartHandshake className="mr-2 size-5" />
+                Pengabdian
               </Link>
             </Button>
+
             <Button
               asChild
               size="lg"
               variant="outline"
-              className="border-white/30 text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm font-semibold"
+              className="h-12 rounded-full border-white/20 bg-white/10 px-6 font-bold text-white backdrop-blur-md hover:bg-white/20 hover:text-white"
             >
               <Link href="/dokumen">
-                <Download className="size-4" />
-                Download Panduan
+                <Download className="mr-2 size-5" />
+                Panduan
               </Link>
             </Button>
           </motion.div>
+        </motion.div>
+
+        {/* Right Visual Card */}
+        <motion.div
+          initial={{ opacity: 0, x: 40, scale: 0.96 }}
+          animate={{ opacity: 1, x: 0, scale: 1 }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+          className="relative hidden lg:block"
+        >
+          <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-accent/30 via-white/10 to-blue-500/20 blur-2xl" />
+
+          <div className="relative overflow-hidden rounded-[2rem] border border-white/15 bg-white/10 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl">
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-white/60">
+                  Dashboard LPPM
+                </p>
+                <h3 className="mt-1 text-2xl font-bold text-white">
+                  Riset & Pengabdian
+                </h3>
+              </div>
+
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent text-accent-foreground shadow-lg shadow-accent/20">
+                <FlaskConical className="size-6" />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+            {error ? (
+                <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
+                  <p className="text-sm font-semibold text-white">
+                    Penelitian, Pengabdian, dan Publikasi
+                  </p>
+                  <p className="mt-2 text-xs text-white/60">
+                    Gagal memuat data hero.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
+                    <div className="mb-3 flex items-center justify-between">
+                      <p className="text-sm font-semibold text-white">
+                        Total Penelitian
+                      </p>
+                      <span className="rounded-full bg-green-400/20 px-3 py-1 text-xs font-bold text-green-200">
+                        {activeResearch} Berjalan
+                      </span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-accent"
+                        style={{ width: `${Math.min(100, Math.max(0, progressResearch))}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
+                      <HeartHandshake className="mb-3 size-6 text-accent" />
+                      <p className="text-2xl font-extrabold text-white">
+                        {totalService}
+                      </p>
+                      <p className="text-xs font-medium text-white/60">
+                        Total Pengabdian
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
+                      <BookOpen className="mb-3 size-6 text-accent" />
+                      <p className="text-2xl font-extrabold text-white">
+                        {totalPublications}
+                      </p>
+                      <p className="text-xs font-medium text-white/60">
+                        Publikasi
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl bg-white p-4 text-slate-900 shadow-xl">
+                    <p className="text-sm font-bold">Fokus LPPM</p>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                      Meningkatkan kualitas penelitian, pengabdian kepada masyarakat, dan publikasi ilmiah.
+                    </p>
+                  </div>
+                </>
+              )}
+
+            </div>
+          </div>
         </motion.div>
       </div>
     </section>

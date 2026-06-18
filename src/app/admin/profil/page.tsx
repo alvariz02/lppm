@@ -4,6 +4,8 @@ import { useAdminPage } from '@/hooks/useAdminPage'
 import { ViewOnlyBanner } from '@/components/admin/ViewOnlyBanner'
 
 import { useState, useCallback } from 'react'
+// Cloudinary upload is server-side via /api/admin/lppm-profile/upload
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -339,15 +341,45 @@ export default function AdminProfilLppmPage() {
                       <FormMessage />
                     </FormItem>
                   )} />
-                  <FormField control={form.control} name="chairmanPhotoUrl" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Foto Ketua URL</FormLabel>
-                      <FormControl>
-                        <Input placeholder="https://..." {...field} value={field.value || ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
+                  <FormField
+                    control={form.control}
+                    name="chairmanPhotoUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Foto Ketua (Upload)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0]
+                              if (!file) return
+                              const formData = new FormData()
+                              formData.append('type', 'chairmanPhoto')
+                              formData.append('file', file)
+                              const res = await fetch('/api/admin/lppm-profile/upload', {
+                                method: 'POST',
+                                body: formData,
+                              })
+                              if (!res.ok) throw new Error('Upload failed')
+                              const result = await res.json()
+                              field.onChange(result.data.url)
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                        <div className="mt-2">
+                          {field.value ? (
+                            <img src={field.value} alt="Foto Ketua" className="h-16 w-16 rounded-full object-cover" />
+                          ) : (
+                            <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                              <User className="size-5 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                      </FormItem>
+                    )}
+                  />
                   <FormField control={form.control} name="chairmanMessage" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-2">
@@ -370,15 +402,45 @@ export default function AdminProfilLppmPage() {
                 <Separator />
 
                 {/* Structure */}
-                <FormField control={form.control} name="structureImageUrl" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Struktur Organisasi (Gambar URL)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://... (URL gambar struktur organisasi)" {...field} value={field.value || ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="structureImageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Struktur Organisasi (Upload)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            const formData = new FormData()
+                            formData.append('type', 'structureImage')
+                            formData.append('file', file)
+                            const res = await fetch('/api/admin/lppm-profile/upload', {
+                              method: 'POST',
+                              body: formData,
+                            })
+                            if (!res.ok) throw new Error('Upload failed')
+                            const result = await res.json()
+                            field.onChange(result.data.url)
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                      <div className="mt-2">
+                        {field.value ? (
+                          <img
+                            src={field.value}
+                            alt="Struktur Organisasi"
+                            className="h-16 w-full rounded-lg object-contain border bg-background"
+                          />
+                        ) : null}
+                      </div>
+                    </FormItem>
+                  )}
+                />
 
                 {/* Mobile save button */}
                 {canWrite && (

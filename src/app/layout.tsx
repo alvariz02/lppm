@@ -17,24 +17,71 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "LPPM Kampus - Lembaga Penelitian dan Pengabdian kepada Masyarakat",
+    default:
+      "LPPM Kampus - Lembaga Penelitian dan Pengabdian kepada Masyarakat",
     template: "%s | LPPM Kampus",
   },
-  description: "Website resmi Lembaga Penelitian dan Pengabdian kepada Masyarakat (LPPM) Kampus. Pusat informasi penelitian, pengabdian masyarakat, publikasi ilmiah, hibah, dan kerja sama.",
-  keywords: ["LPPM", "penelitian", "pengabdian masyarakat", "publikasi", "hibah", "kampus", "universitas"],
+
+  description:
+    "Website resmi Lembaga Penelitian dan Pengabdian kepada Masyarakat (LPPM) Kampus. Pusat informasi penelitian, pengabdian masyarakat, publikasi ilmiah, hibah, dokumen, agenda, dan kerja sama.",
+
+  keywords: [
+    "LPPM",
+    "Lembaga Penelitian dan Pengabdian kepada Masyarakat",
+    "penelitian",
+    "pengabdian masyarakat",
+    "publikasi ilmiah",
+    "hibah",
+    "dokumen LPPM",
+    "kampus",
+    "universitas",
+  ],
+
   authors: [{ name: "LPPM Kampus" }],
+  creator: "LPPM Kampus",
+  publisher: "LPPM Kampus",
+
+  icons: {
+    icon: [
+      {
+        url: "/lppm-logo.png",
+        sizes: "32x32",
+        type: "image/png",
+      },
+      {
+        url: "/lppm-logo.png",
+        sizes: "192x192",
+        type: "image/png",
+      },
+    ],
+    shortcut: "/lppm-logo.png",
+    apple: "/lppm-logo.png",
+  },
+
   openGraph: {
-    title: "LPPM Kampus - Lembaga Penelitian dan Pengabdian kepada Masyarakat",
-    description: "Pusat informasi penelitian, pengabdian masyarakat, publikasi ilmiah, hibah, dan kerja sama.",
+    title:
+      "LPPM Kampus - Lembaga Penelitian dan Pengabdian kepada Masyarakat",
+    description:
+      "Pusat informasi penelitian, pengabdian masyarakat, publikasi ilmiah, hibah, dokumen, agenda, dan kerja sama.",
     type: "website",
     siteName: "LPPM Kampus",
+    images: [
+      {
+        url: "/lppm-logo.png",
+        width: 1200,
+        height: 630,
+        alt: "LPPM Kampus",
+      },
+    ],
   },
+
   twitter: {
     card: "summary_large_image",
     title: "LPPM Kampus",
     description: "Lembaga Penelitian dan Pengabdian kepada Masyarakat",
+    images: ["/lppm-logo.png"],
   },
-};
+}
 
 export default function RootLayout({
   children,
