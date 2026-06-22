@@ -31,7 +31,7 @@ const serviceLinks = [
 
 const socialLinks = [
   { label: 'Facebook', href: 'https://facebook.com', icon: Facebook },
-  { label: 'Instagram', href: 'https://instagram.com', icon: Instagram },
+  { label: 'Instagram', href: 'https://www.instagram.com/lppm_unipasmorotai/', icon: Instagram },
   { label: 'Youtube', href: 'https://youtube.com', icon: Youtube },
 ]
 
@@ -117,7 +117,7 @@ export default function Footer() {
               <li className="flex items-start gap-3">
                 <MapPin className="size-4 mt-0.5 shrink-0 text-accent" />
                 <span className="text-sm text-primary-foreground/80 leading-relaxed">
-                  Jl. Kampus Raya No. 1, Kota Universitas, Indonesia 12345
+                  Jln. Sudirman, Kompleks Lemonade, Daruba Morotai Selatan
                 </span>
               </li>
               <li className="flex items-center gap-3">

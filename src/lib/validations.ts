@@ -64,9 +64,10 @@ export const researchSchema = z.object({
     .max(2030, 'Tahun maksimal 2030'),
   fundingSchemeId: z.string().nullable().optional(),
   leaderId: z.string().nullable().optional(),
-  facultyId: z.string().nullable().optional(),
-  studyProgramId: z.string().nullable().optional(),
+  facultyId: z.string().min(1, 'Fakultas wajib dipilih'),
+  studyProgramId: z.string().min(1, 'Program studi wajib dipilih'),
   fundingSource: z.string().nullable().optional(),
+
   budget: z.number().positive('Anggaran harus bernilai positif').nullable().optional(),
   startDate: z.string().nullable().optional(),
   endDate: z.string().nullable().optional(),

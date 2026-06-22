@@ -1,6 +1,8 @@
 import { db } from './src/lib/db'
 
 async function seed() {
+
+
   console.log('Seeding database...')
 
   // Create admin profiles
@@ -139,32 +141,160 @@ async function seed() {
   }
 
   // Create faculties and study programs
-  const f1 = await db.faculty.upsert({
-    where: { slug: 'fte' },
-    update: {},
-    create: { name: 'Fakultas Teknik dan Elektro', slug: 'fte' },
-  })
-  const f2 = await db.faculty.upsert({
-    where: { slug: 'fisip' },
-    update: {},
-    create: { name: 'Fakultas Ilmu Sosial dan Politik', slug: 'fisip' },
-  })
+  const faculties = {
+    fkip: await db.faculty.upsert({
+      where: { slug: 'fkip' },
+      update: {},
+      create: { name: 'FKIP', slug: 'fkip' },
+    }),
+    ekonomi: await db.faculty.upsert({
+      where: { slug: 'ekonomi' },
+      update: {},
+      create: { name: 'Ekonomi', slug: 'ekonomi' },
+    }),
+    mipa: await db.faculty.upsert({
+      where: { slug: 'mipa' },
+      update: {},
+      create: { name: 'MIPA', slug: 'mipa' },
+    }),
+    pisifol: await db.faculty.upsert({
+      where: { slug: 'pisifol' },
+      update: {},
+      create: { name: 'PISIFOL', slug: 'pisifol' },
+    }),
+    perikanan: await db.faculty.upsert({
+      where: { slug: 'perikanan' },
+      update: {},
+      create: { name: 'Perikanan', slug: 'perikanan' },
+    }),
+    teknik: await db.faculty.upsert({
+      where: { slug: 'teknik' },
+      update: {},
+      create: { name: 'Teknik', slug: 'teknik' },
+    }),
+  }
 
-  const sp1 = await db.studyProgram.upsert({
-    where: { slug: 'teknik-informatika' },
-    update: {},
-    create: { name: 'Teknik Informatika', slug: 'teknik-informatika', facultyId: f1.id },
-  })
-  const sp2 = await db.studyProgram.upsert({
-    where: { slug: 'teknik-elektro' },
-    update: {},
-    create: { name: 'Teknik Elektro', slug: 'teknik-elektro', facultyId: f1.id },
-  })
-  const sp3 = await db.studyProgram.upsert({
-    where: { slug: 'administrasi-publik' },
-    update: {},
-    create: { name: 'Administrasi Publik', slug: 'administrasi-publik', facultyId: f2.id },
-  })
+  const studyPrograms = {
+    // Ekonomi
+    akuntansi: await db.studyProgram.upsert({
+      where: { slug: 'akuntansi' },
+      update: {},
+      create: {
+        name: 'Akuntansi',
+        slug: 'akuntansi',
+        facultyId: faculties.ekonomi.id,
+      },
+    }),
+    adm: await db.studyProgram.upsert({
+      where: { slug: 'adm' },
+      update: {},
+      create: {
+        name: 'ADM',
+        slug: 'adm',
+        facultyId: faculties.ekonomi.id,
+      },
+    }),
+
+    // FKIP
+    bahasaInggris: await db.studyProgram.upsert({
+      where: { slug: 'bahasa-inggris' },
+      update: {},
+      create: {
+        name: 'Bahasa Inggris',
+        slug: 'bahasa-inggris',
+        facultyId: faculties.fkip.id,
+      },
+    }),
+    pgsd: await db.studyProgram.upsert({
+      where: { slug: 'pgsd' },
+      update: {},
+      create: {
+        name: 'PGSD',
+        slug: 'pgsd',
+        facultyId: faculties.fkip.id,
+      },
+    }),
+
+    // MIPA
+    matematika: await db.studyProgram.upsert({
+      where: { slug: 'matematika' },
+      update: {},
+      create: {
+        name: 'Matematika',
+        slug: 'matematika',
+        facultyId: faculties.mipa.id,
+      },
+    }),
+
+    // Perikanan
+    ilmuKelautan: await db.studyProgram.upsert({
+      where: { slug: 'ilmu-kelautan' },
+      update: {},
+      create: {
+        name: 'Ilmu Kelautan',
+        slug: 'ilmu-kelautan',
+        facultyId: faculties.perikanan.id,
+      },
+    }),
+
+    // PISIFOL
+    teknologiHasilPertanian: await db.studyProgram.upsert({
+      where: { slug: 'teknologi-hasil-pertanian' },
+      update: {},
+      create: {
+        name: 'Teknologi Hasil Pertanian',
+        slug: 'teknologi-hasil-pertanian',
+        facultyId: faculties.pisifol.id,
+      },
+    }),
+
+    // Teknik
+    teknikIndustri: await db.studyProgram.upsert({
+      where: { slug: 'teknik-industri' },
+      update: {},
+      create: {
+        name: 'Teknik Industri',
+        slug: 'teknik-industri',
+        facultyId: faculties.teknik.id,
+      },
+    }),
+    teknikInformatika: await db.studyProgram.upsert({
+      where: { slug: 'teknik-informatika' },
+      update: {},
+      create: {
+        name: 'Teknik Informatika',
+        slug: 'teknik-informatika',
+        facultyId: faculties.teknik.id,
+      },
+    }),
+    teknikLingkungan: await db.studyProgram.upsert({
+      where: { slug: 'teknik-lingkungan' },
+      update: {},
+      create: {
+        name: 'Teknik Lingkungan',
+        slug: 'teknik-lingkungan',
+        facultyId: faculties.teknik.id,
+      },
+    }),
+    teknikSipil: await db.studyProgram.upsert({
+      where: { slug: 'teknik-sipil' },
+      update: {},
+      create: {
+        name: 'Teknik Sipil',
+        slug: 'teknik-sipil',
+        facultyId: faculties.teknik.id,
+      },
+    }),
+  }
+
+  // Backward-compatible references for existing seed data below
+  const f1 = faculties.teknik
+  const f2 = faculties.ekonomi
+
+  const sp1 = studyPrograms.teknikInformatika
+  const sp2 = studyPrograms.teknikIndustri
+  const sp3 = studyPrograms.akuntansi
+
 
   // Create researchers
   const r1 = await db.researcher.upsert({
